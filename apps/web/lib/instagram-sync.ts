@@ -269,9 +269,9 @@ type JsonValue =
   | JsonValue[]
   | { [key: string]: JsonValue };
 
-type GraphResponse = Record<string, any>;
+export type GraphResponse = Record<string, any>;
 
-type Manifest = {
+export type Manifest = {
   started_at: string;
   ended_at?: string;
   duration_seconds?: number;
@@ -284,7 +284,7 @@ type Manifest = {
   counts: Record<string, number>;
 };
 
-type SyncReport = {
+export type SyncReport = {
   meta: {
     generated_at: string;
     started_at: string;
@@ -314,6 +314,18 @@ export type ManualSyncResult = {
     topMediaIds: Array<string | null | undefined>;
     durationSeconds: number;
   };
+};
+
+export type InstagramSyncBootstrap = {
+  startedAt: string;
+  apiVersion: string;
+  baseUrl: string;
+  manifest: Manifest;
+};
+
+export type InstagramProfileStageResult = {
+  accountPayload: GraphResponse;
+  canonicalAccountId: string;
 };
 
 class GraphApiError extends Error {
@@ -1260,97 +1272,216 @@ function buildReport({
   } satisfies SyncReport;
 }
 
-export async function runInstagramFullSync(link: InstagramLink): Promise<ManualSyncResult> {
+export function createInstagramSyncBootstrap(
+  link: Pick<InstagramLink, "graphApiVersion">,
+): InstagramSyncBootstrap {
   const startedAt = nowUtc();
   const apiVersion = link.graphApiVersion || getEnv("GRAPH_API_VERSION") || DEFAULT_API_VERSION;
   const baseUrl = getEnv("INSTAGRAM_GRAPH_BASE_URL") ?? DEFAULT_BASE_URL;
 
-  const manifest: Manifest = {
-    started_at: startedAt.toISOString(),
-    api_version: apiVersion,
-    base_url: baseUrl,
-    field_fallbacks: [],
-    warnings: [],
-    skipped_metrics: [],
-    media_errors: [],
-    counts: {},
-  };
-
-  const accountPayload = await fetchProfile({
-    baseUrl,
+  return {
+    startedAt: startedAt.toISOString(),
     apiVersion,
-    accountId: link.instagramUserId,
-    accessToken: link.accessToken,
-    manifest,
+    baseUrl,
+    manifest: {
+      started_at: startedAt.toISOString(),
+      api_version: apiVersion,
+      base_url: baseUrl,
+      field_fallbacks: [],
+      warnings: [],
+      skipped_metrics: [],
+      media_errors: [],
+      counts: {},
+    },
+  };
+}
+
+export async function runInstagramProfileStage(input: {
+  link: Pick<
+    InstagramLink,
+    "instagramUserId" | "accessToken" | "graphApiVersion" | "username"
+  >;
+  apiVersion: string;
+  baseUrl: string;
+  manifest: Manifest;
+}): Promise<InstagramProfileStageResult> {
+  const accountPayload = await fetchProfile({
+    baseUrl: input.baseUrl,
+    apiVersion: input.apiVersion,
+    accountId: input.link.instagramUserId,
+    accessToken: input.link.accessToken,
+    manifest: input.manifest,
   });
 
   const canonicalAccountId = String(
-    accountPayload.user_id ?? accountPayload._canonical_account_id ?? link.instagramUserId,
+    accountPayload.user_id ??
+      accountPayload._canonical_account_id ??
+      input.link.instagramUserId,
   );
 
-  if (canonicalAccountId !== String(link.instagramUserId)) {
-    manifest.warnings.push(
-      `Configured INSTAGRAM_USER_ID ${link.instagramUserId} resolved to canonical Instagram user ID ${canonicalAccountId}.`,
+  if (canonicalAccountId !== String(input.link.instagramUserId)) {
+    input.manifest.warnings.push(
+      `Configured INSTAGRAM_USER_ID ${input.link.instagramUserId} resolved to canonical Instagram user ID ${canonicalAccountId}.`,
     );
   }
 
-  const accountInsights = await fetchAccountInsights({
-    baseUrl,
-    apiVersion,
-    accountId: canonicalAccountId,
-    accessToken: link.accessToken,
-    manifest,
-  });
+  return {
+    accountPayload,
+    canonicalAccountId,
+  };
+}
 
-  const mediaCatalog = await paginateMediaCatalog({
-    baseUrl,
-    apiVersion,
-    accountId: canonicalAccountId,
-    accessToken: link.accessToken,
-    manifest,
+export async function runInstagramAccountInsightsStage(input: {
+  canonicalAccountId: string;
+  accessToken: string;
+  apiVersion: string;
+  baseUrl: string;
+  manifest: Manifest;
+}) {
+  return fetchAccountInsights({
+    baseUrl: input.baseUrl,
+    apiVersion: input.apiVersion,
+    accountId: input.canonicalAccountId,
+    accessToken: input.accessToken,
+    manifest: input.manifest,
   });
+}
 
-  const mediaItems = await fetchMediaBundle({
-    baseUrl,
-    apiVersion,
-    accessToken: link.accessToken,
-    mediaCatalog,
-    manifest,
+export async function runInstagramMediaCatalogStage(input: {
+  canonicalAccountId: string;
+  accessToken: string;
+  apiVersion: string;
+  baseUrl: string;
+  manifest: Manifest;
+}) {
+  return paginateMediaCatalog({
+    baseUrl: input.baseUrl,
+    apiVersion: input.apiVersion,
+    accountId: input.canonicalAccountId,
+    accessToken: input.accessToken,
+    manifest: input.manifest,
   });
+}
 
+export async function runInstagramMediaBundleStage(input: {
+  accessToken: string;
+  apiVersion: string;
+  baseUrl: string;
+  mediaCatalog: GraphResponse[];
+  manifest: Manifest;
+}) {
+  return fetchMediaBundle({
+    baseUrl: input.baseUrl,
+    apiVersion: input.apiVersion,
+    accessToken: input.accessToken,
+    mediaCatalog: input.mediaCatalog,
+    manifest: input.manifest,
+  });
+}
+
+export async function runInstagramTopMediaCommentsStage(input: {
+  accessToken: string;
+  apiVersion: string;
+  baseUrl: string;
+  mediaItems: GraphResponse[];
+  manifest: Manifest;
+}) {
   await fetchTopMediaComments({
-    baseUrl,
-    apiVersion,
-    accessToken: link.accessToken,
-    mediaItems,
-    manifest,
+    baseUrl: input.baseUrl,
+    apiVersion: input.apiVersion,
+    accessToken: input.accessToken,
+    mediaItems: input.mediaItems,
+    manifest: input.manifest,
   });
 
+  return input.mediaItems;
+}
+
+export function finalizeInstagramSyncResult(input: {
+  startedAt: string;
+  apiVersion: string;
+  canonicalAccountId: string;
+  accountPayload: GraphResponse;
+  accountInsights: GraphResponse;
+  mediaItems: GraphResponse[];
+  manifest: Manifest;
+  fallbackUsername?: string;
+}): ManualSyncResult {
   const endedAt = nowUtc();
-  manifest.ended_at = endedAt.toISOString();
-  manifest.duration_seconds = Number(
-    ((endedAt.getTime() - startedAt.getTime()) / 1000).toFixed(3),
+  input.manifest.ended_at = endedAt.toISOString();
+  input.manifest.duration_seconds = Number(
+    ((endedAt.getTime() - new Date(input.startedAt).getTime()) / 1000).toFixed(3),
   );
 
   const report = buildReport({
-    startedAt,
+    startedAt: new Date(input.startedAt),
     endedAt,
-    apiVersion,
-    accountId: canonicalAccountId,
-    accountPayload,
-    accountInsights,
-    mediaItems,
-    manifest,
+    apiVersion: input.apiVersion,
+    accountId: input.canonicalAccountId,
+    accountPayload: input.accountPayload,
+    accountInsights: input.accountInsights,
+    mediaItems: input.mediaItems,
+    manifest: input.manifest,
   });
 
   return {
     report,
     summary: {
-      username: report.account.username ?? link.username ?? "unknown",
+      username: report.account.username ?? input.fallbackUsername ?? "unknown",
       mediaCount: report.media.length,
       warningCount: report.warnings.length,
       topMediaIds: report.highlights.top_media_ids,
-      durationSeconds: manifest.duration_seconds ?? 0,
+      durationSeconds: input.manifest.duration_seconds ?? 0,
     },
   };
+}
+
+export async function runInstagramFullSync(link: InstagramLink): Promise<ManualSyncResult> {
+  const bootstrap = createInstagramSyncBootstrap(link);
+  const profile = await runInstagramProfileStage({
+    link,
+    apiVersion: bootstrap.apiVersion,
+    baseUrl: bootstrap.baseUrl,
+    manifest: bootstrap.manifest,
+  });
+  const accountInsights = await runInstagramAccountInsightsStage({
+    canonicalAccountId: profile.canonicalAccountId,
+    accessToken: link.accessToken,
+    apiVersion: bootstrap.apiVersion,
+    baseUrl: bootstrap.baseUrl,
+    manifest: bootstrap.manifest,
+  });
+  const mediaCatalog = await runInstagramMediaCatalogStage({
+    canonicalAccountId: profile.canonicalAccountId,
+    accessToken: link.accessToken,
+    apiVersion: bootstrap.apiVersion,
+    baseUrl: bootstrap.baseUrl,
+    manifest: bootstrap.manifest,
+  });
+  const mediaItems = await runInstagramMediaBundleStage({
+    accessToken: link.accessToken,
+    apiVersion: bootstrap.apiVersion,
+    baseUrl: bootstrap.baseUrl,
+    mediaCatalog,
+    manifest: bootstrap.manifest,
+  });
+
+  await runInstagramTopMediaCommentsStage({
+    accessToken: link.accessToken,
+    apiVersion: bootstrap.apiVersion,
+    baseUrl: bootstrap.baseUrl,
+    mediaItems,
+    manifest: bootstrap.manifest,
+  });
+
+  return finalizeInstagramSyncResult({
+    startedAt: bootstrap.startedAt,
+    apiVersion: bootstrap.apiVersion,
+    canonicalAccountId: profile.canonicalAccountId,
+    accountPayload: profile.accountPayload,
+    accountInsights,
+    mediaItems,
+    manifest: bootstrap.manifest,
+    fallbackUsername: link.username,
+  });
 }

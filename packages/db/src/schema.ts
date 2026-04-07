@@ -129,6 +129,12 @@ export const instagramSyncRuns = pgTable("instagram_sync_run", {
     .notNull()
     .references(() => instagramAccounts.id, { onDelete: "cascade" }),
   status: text("status").notNull(),
+  triggerType: text("triggerType"),
+  workflowRunId: text("workflowRunId"),
+  currentStep: text("currentStep"),
+  progressPercent: integer("progressPercent"),
+  lastHeartbeatAt: timestamp("lastHeartbeatAt", { mode: "date" }),
+  statusMessage: text("statusMessage"),
   startedAt: timestamp("startedAt", { mode: "date" }).notNull(),
   completedAt: timestamp("completedAt", { mode: "date" }),
   durationSeconds: doublePrecision("durationSeconds"),

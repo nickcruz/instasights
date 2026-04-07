@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 
 import { getDb } from "./client";
 import {
@@ -40,6 +40,8 @@ type SyncResultInput = {
   };
 };
 
+type SyncRunStatus = "queued" | "running" | "completed" | "failed";
+
 function toDate(value: unknown) {
   if (typeof value !== "string") {
     return null;
@@ -55,6 +57,24 @@ export async function getInstagramAccountByUserId(userId: string) {
       .select()
       .from(instagramAccounts)
       .where(eq(instagramAccounts.userId, userId))
+      .limit(1)
+  )[0] ?? null;
+}
+
+export async function getInstagramAccountById(input: {
+  instagramAccountId: string;
+  userId: string;
+}) {
+  return (
+    await getDb()
+      .select()
+      .from(instagramAccounts)
+      .where(
+        and(
+          eq(instagramAccounts.id, input.instagramAccountId),
+          eq(instagramAccounts.userId, input.userId),
+        ),
+      )
       .limit(1)
   )[0] ?? null;
 }
@@ -98,6 +118,7 @@ export async function upsertInstagramAccount(input: InstagramAccountInput) {
 export async function createInstagramSyncRun(input: {
   userId: string;
   instagramAccountId: string;
+  triggerType?: string;
 }) {
   return (
     await getDb()
@@ -105,7 +126,10 @@ export async function createInstagramSyncRun(input: {
       .values({
         userId: input.userId,
         instagramAccountId: input.instagramAccountId,
-        status: "running",
+        status: "queued",
+        triggerType: input.triggerType ?? "manual",
+        progressPercent: 0,
+        statusMessage: "Queued",
         startedAt: new Date(),
         updatedAt: new Date(),
       })
@@ -113,9 +137,60 @@ export async function createInstagramSyncRun(input: {
   )[0];
 }
 
+export async function getInstagramSyncRunById(input: {
+  runId: string;
+  userId: string;
+}) {
+  return (
+    await getDb()
+      .select()
+      .from(instagramSyncRuns)
+      .where(
+        and(
+          eq(instagramSyncRuns.id, input.runId),
+          eq(instagramSyncRuns.userId, input.userId),
+        ),
+      )
+      .limit(1)
+  )[0] ?? null;
+}
+
+export async function updateInstagramSyncRunProgress(input: {
+  runId: string;
+  status?: SyncRunStatus;
+  workflowRunId?: string;
+  currentStep?: string | null;
+  progressPercent?: number | null;
+  statusMessage?: string | null;
+  startedAt?: Date;
+  lastHeartbeatAt?: Date;
+}) {
+  const now = new Date();
+
+  return (
+    await getDb()
+      .update(instagramSyncRuns)
+      .set({
+        status: input.status,
+        workflowRunId: input.workflowRunId,
+        currentStep: input.currentStep,
+        progressPercent: input.progressPercent,
+        statusMessage: input.statusMessage,
+        startedAt: input.startedAt,
+        lastHeartbeatAt: input.lastHeartbeatAt ?? now,
+        updatedAt: now,
+      })
+      .where(eq(instagramSyncRuns.id, input.runId))
+      .returning()
+  )[0];
+}
+
 export async function markInstagramSyncRunFailed(input: {
   runId: string;
   error: string;
+  currentStep?: string | null;
+  progressPercent?: number | null;
+  statusMessage?: string | null;
 }) {
   return (
     await getDb()
@@ -123,6 +198,10 @@ export async function markInstagramSyncRunFailed(input: {
       .set({
         status: "failed",
         error: input.error,
+        currentStep: input.currentStep,
+        progressPercent: input.progressPercent,
+        statusMessage: input.statusMessage ?? input.error,
+        lastHeartbeatAt: new Date(),
         completedAt: new Date(),
         updatedAt: new Date(),
       })
@@ -153,6 +232,10 @@ export async function persistInstagramSyncResult(input: SyncResultInput) {
       .update(instagramSyncRuns)
       .set({
         status: "completed",
+        currentStep: "persist",
+        progressPercent: 100,
+        statusMessage: "Sync completed",
+        lastHeartbeatAt: now,
         completedAt: now,
         durationSeconds: input.summary.durationSeconds,
         mediaCount: input.summary.mediaCount,

@@ -3,15 +3,15 @@ import {
   getInstagramAccountByUserId,
   isDatabaseConfigured,
   markInstagramSyncRunFailed,
-  persistInstagramSyncResult,
+  updateInstagramSyncRunProgress,
 } from "@instagram-insights/db";
 import { NextResponse } from "next/server";
+import { start } from "workflow/api";
 
 import { auth } from "@/lib/auth";
-import { runInstagramFullSync } from "@/lib/instagram-sync";
+import { instagramFullSyncWorkflow } from "@/workflows/instagram-full-sync";
 
 export const runtime = "nodejs";
-export const maxDuration = 900;
 
 export async function POST() {
   const session = await auth();
@@ -40,33 +40,44 @@ export async function POST() {
   const syncRun = await createInstagramSyncRun({
     userId,
     instagramAccountId: instagramAccount.id,
+    triggerType: "manual",
   });
 
   try {
-    const result = await runInstagramFullSync({
-      accessToken: instagramAccount.accessToken,
-      instagramUserId: instagramAccount.instagramUserId,
-      username: instagramAccount.username ?? "",
-      issuedAt: instagramAccount.tokenIssuedAt?.toISOString() ?? "",
-      linkedAt: instagramAccount.linkedAt.toISOString(),
-      graphApiVersion: instagramAccount.graphApiVersion,
-      authAppUrl: instagramAccount.authAppUrl ?? "",
-    });
-    await persistInstagramSyncResult({
+    const run = await start(instagramFullSyncWorkflow, [
+      {
+        syncRunId: syncRun.id,
+        userId,
+        instagramAccountId: instagramAccount.id,
+        triggerType: "manual",
+      },
+    ]);
+
+    await updateInstagramSyncRunProgress({
       runId: syncRun.id,
-      userId,
-      instagramAccountId: instagramAccount.id,
-      report: result.report,
-      summary: result.summary,
+      status: "queued",
+      workflowRunId: run.runId,
+      currentStep: "queued",
+      progressPercent: 0,
+      statusMessage: "Sync queued",
     });
 
-    return NextResponse.json(result);
+    return NextResponse.json(
+      {
+        syncRunId: syncRun.id,
+        workflowRunId: run.runId,
+        status: "queued",
+      },
+      { status: 202 },
+    );
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Instagram sync failed.";
     await markInstagramSyncRunFailed({
       runId: syncRun.id,
       error: message,
+      currentStep: "queue",
+      progressPercent: 0,
     });
     return NextResponse.json({ error: message }, { status: 500 });
   }

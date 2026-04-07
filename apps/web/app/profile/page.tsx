@@ -94,11 +94,32 @@ export default async function ProfilePage({
           latestSyncRun={
             latestSyncRun
               ? {
+                  syncRunId: latestSyncRun.id,
+                  workflowRunId: latestSyncRun.workflowRunId ?? null,
+                  triggerType: latestSyncRun.triggerType ?? null,
                   status: latestSyncRun.status,
+                  currentStep: latestSyncRun.currentStep ?? null,
+                  progressPercent: latestSyncRun.progressPercent ?? null,
+                  statusMessage: latestSyncRun.statusMessage ?? null,
+                  error: latestSyncRun.error ?? null,
                   startedAt: latestSyncRun.startedAt.toISOString(),
                   completedAt: latestSyncRun.completedAt?.toISOString() ?? null,
+                  lastHeartbeatAt:
+                    latestSyncRun.lastHeartbeatAt?.toISOString() ?? null,
                   mediaCount: latestSyncRun.mediaCount ?? null,
                   warningCount: latestSyncRun.warningCount ?? null,
+                  summary:
+                    latestSyncRun.summary &&
+                    typeof latestSyncRun.summary === "object" &&
+                    !Array.isArray(latestSyncRun.summary)
+                      ? (latestSyncRun.summary as {
+                          username: string;
+                          mediaCount: number;
+                          warningCount: number;
+                          topMediaIds: Array<string | null | undefined>;
+                          durationSeconds: number;
+                        })
+                      : null,
                 }
               : null
           }
