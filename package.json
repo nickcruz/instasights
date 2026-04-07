@@ -1,0 +1,17 @@
+{
+  "name": "instagram-insights",
+  "private": true,
+  "packageManager": "yarn@1.22.22",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "yarn workspace @instagram-insights/web dev",
+    "build": "yarn workspace @instagram-insights/web build",
+    "lint": "yarn workspace @instagram-insights/web lint",
+    "typecheck": "yarn workspace @instagram-insights/web typecheck",
+    "db:generate": "yarn workspace @instagram-insights/db db:generate",
+    "db:push": "yarn workspace @instagram-insights/db db:push"
+  }
+}
