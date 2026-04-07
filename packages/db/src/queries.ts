@@ -42,6 +42,14 @@ type SyncResultInput = {
 
 type SyncRunStatus = "queued" | "running" | "completed" | "failed";
 
+type SyncRunProgress = {
+  mediaCatalogCount?: number;
+  recentMediaCount?: number;
+  totalBundles?: number;
+  completedBundles?: number;
+  activeBundleLabel?: string | null;
+};
+
 function toDate(value: unknown) {
   if (typeof value !== "string") {
     return null;
@@ -130,6 +138,13 @@ export async function createInstagramSyncRun(input: {
         triggerType: input.triggerType ?? "manual",
         progressPercent: 0,
         statusMessage: "Queued",
+        progress: {
+          mediaCatalogCount: 0,
+          recentMediaCount: 0,
+          totalBundles: 0,
+          completedBundles: 0,
+          activeBundleLabel: null,
+        },
         startedAt: new Date(),
         updatedAt: new Date(),
       })
@@ -164,6 +179,7 @@ export async function updateInstagramSyncRunProgress(input: {
   statusMessage?: string | null;
   startedAt?: Date;
   lastHeartbeatAt?: Date;
+  progress?: SyncRunProgress | null;
 }) {
   const now = new Date();
 
@@ -176,6 +192,7 @@ export async function updateInstagramSyncRunProgress(input: {
         currentStep: input.currentStep,
         progressPercent: input.progressPercent,
         statusMessage: input.statusMessage,
+        progress: input.progress,
         startedAt: input.startedAt,
         lastHeartbeatAt: input.lastHeartbeatAt ?? now,
         updatedAt: now,
@@ -191,6 +208,7 @@ export async function markInstagramSyncRunFailed(input: {
   currentStep?: string | null;
   progressPercent?: number | null;
   statusMessage?: string | null;
+  progress?: SyncRunProgress | null;
 }) {
   return (
     await getDb()
@@ -201,6 +219,7 @@ export async function markInstagramSyncRunFailed(input: {
         currentStep: input.currentStep,
         progressPercent: input.progressPercent,
         statusMessage: input.statusMessage ?? input.error,
+        progress: input.progress,
         lastHeartbeatAt: new Date(),
         completedAt: new Date(),
         updatedAt: new Date(),
@@ -235,6 +254,7 @@ export async function persistInstagramSyncResult(input: SyncResultInput) {
         currentStep: "persist",
         progressPercent: 100,
         statusMessage: "Sync completed",
+        progress: null,
         lastHeartbeatAt: now,
         completedAt: now,
         durationSeconds: input.summary.durationSeconds,

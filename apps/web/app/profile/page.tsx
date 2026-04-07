@@ -108,6 +108,18 @@ export default async function ProfilePage({
                     latestSyncRun.lastHeartbeatAt?.toISOString() ?? null,
                   mediaCount: latestSyncRun.mediaCount ?? null,
                   warningCount: latestSyncRun.warningCount ?? null,
+                  progress:
+                    latestSyncRun.progress &&
+                    typeof latestSyncRun.progress === "object" &&
+                    !Array.isArray(latestSyncRun.progress)
+                      ? (latestSyncRun.progress as {
+                          mediaCatalogCount?: number;
+                          recentMediaCount?: number;
+                          totalBundles?: number;
+                          completedBundles?: number;
+                          activeBundleLabel?: string | null;
+                        })
+                      : null,
                   summary:
                     latestSyncRun.summary &&
                     typeof latestSyncRun.summary === "object" &&

@@ -51,6 +51,7 @@ export async function GET(_request: Request, context: RouteContext) {
     lastHeartbeatAt: syncRun.lastHeartbeatAt?.toISOString() ?? null,
     mediaCount: syncRun.mediaCount ?? null,
     warningCount: syncRun.warningCount ?? null,
+    progress: syncRun.progress ?? null,
     summary: syncRun.summary ?? null,
   });
 }

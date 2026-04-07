@@ -33,6 +33,13 @@ type SyncRunStatus = {
   lastHeartbeatAt: string | null;
   mediaCount: number | null;
   warningCount: number | null;
+  progress: {
+    mediaCatalogCount?: number;
+    recentMediaCount?: number;
+    totalBundles?: number;
+    completedBundles?: number;
+    activeBundleLabel?: string | null;
+  } | null;
   summary: SyncSummary | null;
 };
 
@@ -189,10 +196,31 @@ export function ManualSyncCard({
             <div className="grid gap-3 md:grid-cols-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-[var(--muted-foreground)]">
-                  Media
+                  Recent media
                 </p>
                 <p className="mt-1 text-sm font-semibold">
-                  {syncRun.summary?.mediaCount ?? syncRun.mediaCount ?? "Pending"}
+                  {syncRun.progress?.recentMediaCount ??
+                    syncRun.summary?.mediaCount ??
+                    syncRun.mediaCount ??
+                    "Pending"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-[var(--muted-foreground)]">
+                  Bundles
+                </p>
+                <p className="mt-1 text-sm font-semibold">
+                  {typeof syncRun.progress?.totalBundles === "number"
+                    ? `${syncRun.progress?.completedBundles ?? 0}/${syncRun.progress.totalBundles}`
+                    : "Pending"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-[var(--muted-foreground)]">
+                  Catalog size
+                </p>
+                <p className="mt-1 text-sm font-semibold">
+                  {syncRun.progress?.mediaCatalogCount ?? "Pending"}
                 </p>
               </div>
               <div>
@@ -203,14 +231,15 @@ export function ManualSyncCard({
                   {syncRun.summary?.warningCount ?? syncRun.warningCount ?? "Pending"}
                 </p>
               </div>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-[var(--muted-foreground)]">
-                  Completed
+                  Active bundle
                 </p>
                 <p className="mt-1 text-sm font-semibold">
-                  {syncRun.completedAt
-                    ? new Date(syncRun.completedAt).toLocaleString()
-                    : "Not yet"}
+                  {syncRun.progress?.activeBundleLabel ?? "Idle"}
                 </p>
               </div>
               <div>
@@ -231,6 +260,16 @@ export function ManualSyncCard({
                   </p>
                   <p className="mt-1 text-sm font-semibold">
                     @{syncRun.summary.username}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-[var(--muted-foreground)]">
+                    Completed
+                  </p>
+                  <p className="mt-1 text-sm font-semibold">
+                    {syncRun.completedAt
+                      ? new Date(syncRun.completedAt).toLocaleString()
+                      : "Not yet"}
                   </p>
                 </div>
                 <div>

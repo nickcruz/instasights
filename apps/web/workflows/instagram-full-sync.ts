@@ -1,25 +1,24 @@
-import {
-  FatalError,
-  getWorkflowMetadata,
-} from "workflow";
-import {
-  getInstagramAccountById,
-  markInstagramSyncRunFailed,
-  persistInstagramSyncResult,
-  updateInstagramSyncRunProgress,
-} from "@instagram-insights/db";
+import { getWorkflowMetadata } from "workflow";
 
+import type { GraphResponse } from "@/lib/instagram-sync";
 import {
-  createInstagramSyncBootstrap,
-  finalizeInstagramSyncResult,
-  runInstagramAccountInsightsStage,
-  runInstagramMediaBundleStage,
-  runInstagramMediaCatalogStage,
-  runInstagramProfileStage,
-  runInstagramTopMediaCommentsStage,
-  type GraphResponse,
-  type Manifest,
-} from "@/lib/instagram-sync";
+  chunkMediaCatalogStep,
+  createBootstrapStep,
+  createEmptyProgress,
+  failRunStep,
+  fetchAccountInsightsStep,
+  fetchMediaCatalogStep,
+  fetchMediaDetailBatchStep,
+  fetchMediaMetricsBatchStep,
+  fetchProfileStep,
+  fetchTopMediaCommentsStep,
+  filterRecentMediaCatalogStep,
+  markRunProgress,
+  mergeBundleManifestsStep,
+  normalizeMediaBatchStep,
+  persistSyncResultStep,
+  loadInstagramAccount,
+} from "@/workflows/instagram-full-sync-steps";
 
 export type InstagramSyncWorkflowInput = {
   syncRunId: string;
@@ -27,171 +26,6 @@ export type InstagramSyncWorkflowInput = {
   instagramAccountId: string;
   triggerType: "manual" | "scheduled";
 };
-
-type InstagramWorkflowLink = {
-  accessToken: string;
-  instagramUserId: string;
-  username: string;
-  graphApiVersion: string;
-};
-
-async function markRunProgress(input: {
-  runId: string;
-  status?: "queued" | "running" | "completed" | "failed";
-  workflowRunId?: string;
-  currentStep?: string | null;
-  progressPercent?: number | null;
-  statusMessage?: string | null;
-}) {
-  "use step";
-
-  await updateInstagramSyncRunProgress({
-    runId: input.runId,
-    status: input.status,
-    workflowRunId: input.workflowRunId,
-    currentStep: input.currentStep,
-    progressPercent: input.progressPercent,
-    statusMessage: input.statusMessage,
-  });
-}
-
-async function loadInstagramAccount(input: {
-  instagramAccountId: string;
-  userId: string;
-}) {
-  "use step";
-
-  const account = await getInstagramAccountById(input);
-
-  if (!account) {
-    throw new FatalError("Linked Instagram account not found.");
-  }
-
-  return {
-    accessToken: account.accessToken,
-    instagramUserId: account.instagramUserId,
-    username: account.username ?? "",
-    graphApiVersion: account.graphApiVersion,
-  } satisfies InstagramWorkflowLink;
-}
-
-async function createBootstrapStep(link: InstagramWorkflowLink) {
-  "use step";
-
-  return createInstagramSyncBootstrap(link);
-}
-
-async function fetchProfileStep(input: {
-  link: InstagramWorkflowLink;
-  apiVersion: string;
-  baseUrl: string;
-  manifest: Manifest;
-}) {
-  "use step";
-
-  return runInstagramProfileStage(input);
-}
-
-async function fetchAccountInsightsStep(input: {
-  canonicalAccountId: string;
-  accessToken: string;
-  apiVersion: string;
-  baseUrl: string;
-  manifest: Manifest;
-}) {
-  "use step";
-
-  return runInstagramAccountInsightsStage(input);
-}
-
-async function fetchMediaCatalogStep(input: {
-  canonicalAccountId: string;
-  accessToken: string;
-  apiVersion: string;
-  baseUrl: string;
-  manifest: Manifest;
-}) {
-  "use step";
-
-  return runInstagramMediaCatalogStage(input);
-}
-
-async function fetchMediaBundleStep(input: {
-  accessToken: string;
-  apiVersion: string;
-  baseUrl: string;
-  mediaCatalog: GraphResponse[];
-  manifest: Manifest;
-}) {
-  "use step";
-
-  return runInstagramMediaBundleStage(input);
-}
-
-async function fetchTopMediaCommentsStep(input: {
-  accessToken: string;
-  apiVersion: string;
-  baseUrl: string;
-  mediaItems: GraphResponse[];
-  manifest: Manifest;
-}) {
-  "use step";
-
-  return runInstagramTopMediaCommentsStage(input);
-}
-
-async function persistSyncResultStep(input: {
-  syncRunId: string;
-  userId: string;
-  instagramAccountId: string;
-  startedAt: string;
-  apiVersion: string;
-  canonicalAccountId: string;
-  accountPayload: GraphResponse;
-  accountInsights: GraphResponse;
-  mediaItems: GraphResponse[];
-  manifest: Manifest;
-  fallbackUsername: string;
-}) {
-  "use step";
-
-  const result = finalizeInstagramSyncResult({
-    startedAt: input.startedAt,
-    apiVersion: input.apiVersion,
-    canonicalAccountId: input.canonicalAccountId,
-    accountPayload: input.accountPayload,
-    accountInsights: input.accountInsights,
-    mediaItems: input.mediaItems,
-    manifest: input.manifest,
-    fallbackUsername: input.fallbackUsername,
-  });
-
-  await persistInstagramSyncResult({
-    runId: input.syncRunId,
-    userId: input.userId,
-    instagramAccountId: input.instagramAccountId,
-    report: result.report,
-    summary: result.summary,
-  });
-
-  return result.summary;
-}
-
-async function failRunStep(input: {
-  syncRunId: string;
-  error: string;
-  currentStep?: string | null;
-  progressPercent?: number | null;
-}) {
-  "use step";
-
-  await markInstagramSyncRunFailed({
-    runId: input.syncRunId,
-    error: input.error,
-    currentStep: input.currentStep,
-    progressPercent: input.progressPercent,
-  });
-}
 
 export async function instagramFullSyncWorkflow(
   input: InstagramSyncWorkflowInput,
@@ -201,6 +35,7 @@ export async function instagramFullSyncWorkflow(
   const workflow = getWorkflowMetadata();
   let currentStep = "queued";
   let progressPercent = 0;
+  let progress = createEmptyProgress();
 
   try {
     await markRunProgress({
@@ -210,6 +45,7 @@ export async function instagramFullSyncWorkflow(
       currentStep: "bootstrap",
       progressPercent: 5,
       statusMessage: "Workflow started",
+      progress,
     });
 
     const link = await loadInstagramAccount({
@@ -217,17 +53,19 @@ export async function instagramFullSyncWorkflow(
       userId: input.userId,
     });
 
+    const bootstrap = await createBootstrapStep(link);
+
     currentStep = "profile";
-    progressPercent = 15;
+    progressPercent = 12;
     await markRunProgress({
       runId: input.syncRunId,
       status: "running",
       currentStep,
       progressPercent,
       statusMessage: "Fetching Instagram profile",
+      progress,
     });
 
-    const bootstrap = await createBootstrapStep(link);
     const profile = await fetchProfileStep({
       link,
       apiVersion: bootstrap.apiVersion,
@@ -236,13 +74,14 @@ export async function instagramFullSyncWorkflow(
     });
 
     currentStep = "account-insights";
-    progressPercent = 35;
+    progressPercent = 22;
     await markRunProgress({
       runId: input.syncRunId,
       status: "running",
       currentStep,
       progressPercent,
       statusMessage: "Fetching account insights",
+      progress,
     });
 
     const accountInsights = await fetchAccountInsightsStep({
@@ -254,13 +93,14 @@ export async function instagramFullSyncWorkflow(
     });
 
     currentStep = "media-catalog";
-    progressPercent = 50;
+    progressPercent = 32;
     await markRunProgress({
       runId: input.syncRunId,
       status: "running",
       currentStep,
       progressPercent,
       statusMessage: "Fetching media catalog",
+      progress,
     });
 
     const mediaCatalog = await fetchMediaCatalogStep({
@@ -271,32 +111,167 @@ export async function instagramFullSyncWorkflow(
       manifest: bootstrap.manifest,
     });
 
-    currentStep = "media-insights";
-    progressPercent = 70;
+    progress = {
+      ...progress,
+      mediaCatalogCount: mediaCatalog.length,
+    };
+
+    currentStep = "filter-recent-media";
+    progressPercent = 40;
     await markRunProgress({
       runId: input.syncRunId,
       status: "running",
       currentStep,
       progressPercent,
-      statusMessage: "Fetching media details and insights",
+      statusMessage: "Filtering media to the last 30 days",
+      progress,
     });
 
-    const mediaItems = await fetchMediaBundleStep({
-      accessToken: link.accessToken,
-      apiVersion: bootstrap.apiVersion,
-      baseUrl: bootstrap.baseUrl,
+    const recentMediaCatalog = await filterRecentMediaCatalogStep({
       mediaCatalog,
       manifest: bootstrap.manifest,
     });
 
-    currentStep = "comments";
-    progressPercent = 85;
+    const bundles = await chunkMediaCatalogStep({
+      syncRunId: input.syncRunId,
+      mediaCatalog: recentMediaCatalog,
+    });
+
+    progress = {
+      ...progress,
+      recentMediaCount: recentMediaCatalog.length,
+      totalBundles: bundles.length,
+      completedBundles: 0,
+      activeBundleLabel: bundles.length ? "Starting bundle fan-out" : null,
+    };
+
+    currentStep = "fetch-media-detail-batch";
+    progressPercent = 48;
     await markRunProgress({
       runId: input.syncRunId,
       status: "running",
       currentStep,
       progressPercent,
-      statusMessage: "Fetching top media comments",
+      statusMessage:
+        bundles.length > 0
+          ? `Fetching media details across ${bundles.length} bundles`
+          : "No recent media bundles to process",
+      progress,
+    });
+
+    const detailBundles = await Promise.all(
+      bundles.map((bundle) =>
+        fetchMediaDetailBatchStep({
+          runId: input.syncRunId,
+          bundle,
+          totalBundles: bundles.length,
+          accessToken: link.accessToken,
+          apiVersion: bootstrap.apiVersion,
+          baseUrl: bootstrap.baseUrl,
+          startedAt: bootstrap.startedAt,
+          progress,
+        }),
+      ),
+    );
+
+    currentStep = "fetch-media-metrics-batch";
+    progressPercent = 64;
+    await markRunProgress({
+      runId: input.syncRunId,
+      status: "running",
+      currentStep,
+      progressPercent,
+      statusMessage:
+        bundles.length > 0
+          ? `Fetching media metrics across ${bundles.length} bundles`
+          : "No recent media metrics to fetch",
+      progress,
+    });
+
+    const metricBundles = await Promise.all(
+      detailBundles.map((bundleResult) =>
+        fetchMediaMetricsBatchStep({
+          runId: input.syncRunId,
+          bundle: bundleResult.bundle,
+          totalBundles: bundles.length,
+          accessToken: link.accessToken,
+          apiVersion: bootstrap.apiVersion,
+          baseUrl: bootstrap.baseUrl,
+          startedAt: bootstrap.startedAt,
+          detailsByMediaId: bundleResult.detailsByMediaId,
+          progress,
+        }),
+      ),
+    );
+
+    currentStep = "normalize-media-batch";
+    progressPercent = 78;
+    await markRunProgress({
+      runId: input.syncRunId,
+      status: "running",
+      currentStep,
+      progressPercent,
+      statusMessage:
+        bundles.length > 0
+          ? `Normalizing ${recentMediaCatalog.length} recent media items`
+          : "No recent media to normalize",
+      progress,
+    });
+
+    const normalizedBundles = await Promise.all(
+      metricBundles.map((bundleResult) =>
+        normalizeMediaBatchStep({
+          runId: input.syncRunId,
+          bundle: bundleResult.bundle,
+          totalBundles: bundles.length,
+          apiVersion: bootstrap.apiVersion,
+          baseUrl: bootstrap.baseUrl,
+          startedAt: bootstrap.startedAt,
+          mediaItems: bundleResult.mediaItems,
+          progress,
+        }),
+      ),
+    );
+
+    progress = {
+      ...progress,
+      completedBundles: bundles.length,
+      activeBundleLabel: null,
+    };
+
+    const mediaItems = normalizedBundles
+      .flatMap((bundle) => bundle.mediaItems)
+      .sort((a: GraphResponse, b: GraphResponse) => {
+        const aTime =
+          typeof a.timestamp === "string" ? new Date(a.timestamp).getTime() : 0;
+        const bTime =
+          typeof b.timestamp === "string" ? new Date(b.timestamp).getTime() : 0;
+
+        if (bTime !== aTime) {
+          return bTime - aTime;
+        }
+
+        return String(a.id ?? "").localeCompare(String(b.id ?? ""));
+      });
+
+    bootstrap.manifest = await mergeBundleManifestsStep({
+      manifests: [
+        bootstrap.manifest,
+        ...detailBundles.map((bundle) => bundle.manifest),
+        ...metricBundles.map((bundle) => bundle.manifest),
+        ...normalizedBundles.map((bundle) => bundle.manifest),
+      ],
+    });
+
+    currentStep = "comments";
+    progressPercent = 88;
+    await markRunProgress({
+      runId: input.syncRunId,
+      status: "running",
+      currentStep,
+      progressPercent,
+      statusMessage: "Fetching top comments for recent media",
+      progress,
     });
 
     await fetchTopMediaCommentsStep({
@@ -315,6 +290,7 @@ export async function instagramFullSyncWorkflow(
       currentStep,
       progressPercent,
       statusMessage: "Persisting sync results",
+      progress,
     });
 
     const summary = await persistSyncResultStep({
@@ -346,6 +322,7 @@ export async function instagramFullSyncWorkflow(
       error: message,
       currentStep,
       progressPercent,
+      progress,
     });
 
     throw error;

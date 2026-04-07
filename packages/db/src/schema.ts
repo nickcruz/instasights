@@ -135,6 +135,7 @@ export const instagramSyncRuns = pgTable("instagram_sync_run", {
   progressPercent: integer("progressPercent"),
   lastHeartbeatAt: timestamp("lastHeartbeatAt", { mode: "date" }),
   statusMessage: text("statusMessage"),
+  progress: jsonb("progress"),
   startedAt: timestamp("startedAt", { mode: "date" }).notNull(),
   completedAt: timestamp("completedAt", { mode: "date" }),
   durationSeconds: doublePrecision("durationSeconds"),

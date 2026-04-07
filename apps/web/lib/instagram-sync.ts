@@ -328,6 +328,22 @@ export type InstagramProfileStageResult = {
   canonicalAccountId: string;
 };
 
+export type MediaBundle = {
+  bundleId: string;
+  bundleIndex: number;
+  mediaEntries: GraphResponse[];
+};
+
+export type MediaDetailBatchResult = {
+  detailsByMediaId: Record<string, GraphResponse>;
+  manifest: Manifest;
+};
+
+export type MediaMetricsBatchResult = {
+  mediaItems: GraphResponse[];
+  manifest: Manifest;
+};
+
 class GraphApiError extends Error {
   payload?: GraphResponse;
   status?: number;
@@ -344,8 +360,76 @@ function nowUtc() {
   return new Date();
 }
 
+function parseTimestamp(value: unknown) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 function timestampSlug(date: Date) {
   return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+}
+
+function createManifestFragment({
+  startedAt,
+  apiVersion,
+  baseUrl,
+}: {
+  startedAt: string;
+  apiVersion: string;
+  baseUrl: string;
+}): Manifest {
+  return {
+    started_at: startedAt,
+    api_version: apiVersion,
+    base_url: baseUrl,
+    field_fallbacks: [],
+    warnings: [],
+    skipped_metrics: [],
+    media_errors: [],
+    counts: {},
+  };
+}
+
+export function mergeManifestFragments(fragments: Manifest[]): Manifest {
+  if (!fragments.length) {
+    return createManifestFragment({
+      startedAt: nowUtc().toISOString(),
+      apiVersion: DEFAULT_API_VERSION,
+      baseUrl: DEFAULT_BASE_URL,
+    });
+  }
+
+  const [first, ...rest] = fragments;
+  const merged: Manifest = {
+    started_at: first.started_at,
+    ended_at: first.ended_at,
+    duration_seconds: first.duration_seconds,
+    api_version: first.api_version,
+    base_url: first.base_url,
+    field_fallbacks: [...first.field_fallbacks],
+    warnings: [...first.warnings],
+    skipped_metrics: [...first.skipped_metrics],
+    media_errors: [...first.media_errors],
+    counts: { ...first.counts },
+  };
+
+  for (const fragment of rest) {
+    merged.field_fallbacks.push(...fragment.field_fallbacks);
+    merged.warnings.push(...fragment.warnings);
+    merged.skipped_metrics.push(...fragment.skipped_metrics);
+    merged.media_errors.push(...fragment.media_errors);
+
+    for (const [key, value] of Object.entries(fragment.counts)) {
+      merged.counts[key] = (merged.counts[key] ?? 0) + value;
+    }
+  }
+
+  merged.warnings = [...new Set(merged.warnings)];
+  return merged;
 }
 
 function makeUrl(
@@ -549,6 +633,69 @@ async function paginateMediaCatalog({
   manifest.counts.media_catalog_pages = pages.length;
 
   return items;
+}
+
+function compareMediaEntries(a: GraphResponse, b: GraphResponse) {
+  const aTime = parseTimestamp(a.timestamp)?.getTime() ?? 0;
+  const bTime = parseTimestamp(b.timestamp)?.getTime() ?? 0;
+
+  if (bTime !== aTime) {
+    return bTime - aTime;
+  }
+
+  return String(a.id ?? "").localeCompare(String(b.id ?? ""));
+}
+
+export function filterRecentMediaCatalog(input: {
+  mediaCatalog: GraphResponse[];
+  manifest: Manifest;
+  now?: Date;
+  windowDays?: number;
+}) {
+  const now = input.now ?? nowUtc();
+  const windowDays = input.windowDays ?? 30;
+  const threshold = new Date(now.getTime() - windowDays * 24 * 60 * 60 * 1000);
+  const recentMedia: GraphResponse[] = [];
+
+  for (const entry of input.mediaCatalog) {
+    const postedAt = parseTimestamp(entry.timestamp);
+
+    if (!postedAt) {
+      input.manifest.warnings.push(
+        `Skipping media ${entry.id ?? "unknown"} because timestamp is missing or invalid.`,
+      );
+      continue;
+    }
+
+    if (postedAt >= threshold) {
+      recentMedia.push(entry);
+    }
+  }
+
+  recentMedia.sort(compareMediaEntries);
+  input.manifest.counts.media_recent_items = recentMedia.length;
+
+  return recentMedia;
+}
+
+export function chunkMediaCatalog(input: {
+  syncRunId: string;
+  mediaCatalog: GraphResponse[];
+  chunkSize?: number;
+}) {
+  const chunkSize = input.chunkSize ?? 10;
+  const bundles: MediaBundle[] = [];
+
+  for (let index = 0; index < input.mediaCatalog.length; index += chunkSize) {
+    const bundleIndex = Math.floor(index / chunkSize);
+    bundles.push({
+      bundleId: `${input.syncRunId}:bundle:${bundleIndex}`,
+      bundleIndex,
+      mediaEntries: input.mediaCatalog.slice(index, index + chunkSize),
+    });
+  }
+
+  return bundles;
 }
 
 async function fetchAccountInsights({
@@ -770,6 +917,153 @@ async function fetchMediaBundle({
 
   manifest.counts.media_items_processed = normalizedMedia.length;
   return normalizedMedia;
+}
+
+export async function fetchMediaDetailBatch(input: {
+  bundle: MediaBundle;
+  baseUrl: string;
+  apiVersion: string;
+  accessToken: string;
+  startedAt: string;
+}) {
+  const manifest = createManifestFragment({
+    startedAt: input.startedAt,
+    apiVersion: input.apiVersion,
+    baseUrl: input.baseUrl,
+  });
+  const detailsByMediaId: Record<string, GraphResponse> = {};
+
+  for (const catalogEntry of input.bundle.mediaEntries) {
+    const mediaId = typeof catalogEntry.id === "string" ? catalogEntry.id : null;
+
+    if (!mediaId) {
+      continue;
+    }
+
+    try {
+      detailsByMediaId[mediaId] = await fetchMediaDetail({
+        baseUrl: input.baseUrl,
+        apiVersion: input.apiVersion,
+        mediaId,
+        accessToken: input.accessToken,
+        manifest,
+      });
+    } catch (error) {
+      detailsByMediaId[mediaId] = { id: mediaId };
+      manifest.media_errors.push({
+        media_id: mediaId,
+        stage: "detail",
+        error: compactError(error),
+      });
+    }
+  }
+
+  manifest.counts.bundle_media_detail_items = Object.keys(detailsByMediaId).length;
+
+  return {
+    detailsByMediaId,
+    manifest,
+  } satisfies MediaDetailBatchResult;
+}
+
+export async function fetchMediaMetricsBatch(input: {
+  bundle: MediaBundle;
+  detailsByMediaId: Record<string, GraphResponse>;
+  baseUrl: string;
+  apiVersion: string;
+  accessToken: string;
+  startedAt: string;
+}) {
+  const manifest = createManifestFragment({
+    startedAt: input.startedAt,
+    apiVersion: input.apiVersion,
+    baseUrl: input.baseUrl,
+  });
+  const mediaItems: GraphResponse[] = [];
+
+  for (const catalogEntry of input.bundle.mediaEntries) {
+    const mediaId = typeof catalogEntry.id === "string" ? catalogEntry.id : null;
+
+    if (!mediaId) {
+      continue;
+    }
+
+    const normalized = normalizeMediaEntry(
+      input.detailsByMediaId[mediaId] ?? { id: mediaId },
+      catalogEntry,
+    );
+
+    for (const metricSpec of metricSpecsFor(normalized.media_product_type)) {
+      try {
+        const payload = await graphGetPath(
+          input.baseUrl,
+          input.apiVersion,
+          `${mediaId}/insights`,
+          {
+            metric: metricSpec.metric,
+            breakdown: metricSpec.breakdown,
+            access_token: input.accessToken,
+          },
+        );
+
+        const data = Array.isArray(payload.data) ? payload.data : [];
+        const entry = data[0] ?? { name: metricSpec.metric, empty: true };
+        normalized.insights.metrics[metricSpec.metric] = entry;
+
+        if ("total_value" in entry) {
+          normalized.insights.breakdowns[metricSpec.metric] = entry.total_value ?? {};
+        } else if (entry.values) {
+          normalized.insights.breakdowns[metricSpec.metric] = entry.values;
+        }
+
+        if (!data.length) {
+          normalized.warnings.push(
+            `Metric '${metricSpec.metric}' returned an empty dataset.`,
+          );
+        }
+      } catch (error) {
+        const message = compactError(error);
+        normalized.insights.errors[metricSpec.metric] = message;
+        normalized.errors.push(`${metricSpec.metric}: ${message}`);
+        manifest.skipped_metrics.push({
+          scope: "media",
+          media_id: mediaId,
+          metric: metricSpec.metric,
+          reason: message,
+        });
+      }
+    }
+
+    mediaItems.push(normalized);
+  }
+
+  manifest.counts.bundle_media_metrics_items = mediaItems.length;
+
+  return {
+    mediaItems,
+    manifest,
+  } satisfies MediaMetricsBatchResult;
+}
+
+export function normalizeMediaBatch(input: {
+  bundle: MediaBundle;
+  mediaItems: GraphResponse[];
+  startedAt: string;
+  apiVersion: string;
+  baseUrl: string;
+}) {
+  const manifest = createManifestFragment({
+    startedAt: input.startedAt,
+    apiVersion: input.apiVersion,
+    baseUrl: input.baseUrl,
+  });
+
+  manifest.counts.bundle_media_normalized_items = input.mediaItems.length;
+
+  return {
+    mediaItems: [...input.mediaItems].sort(compareMediaEntries),
+    manifest,
+  } satisfies MediaMetricsBatchResult;
 }
 
 function metricScore(metricPayload: GraphResponse | undefined) {
@@ -1283,16 +1577,11 @@ export function createInstagramSyncBootstrap(
     startedAt: startedAt.toISOString(),
     apiVersion,
     baseUrl,
-    manifest: {
-      started_at: startedAt.toISOString(),
-      api_version: apiVersion,
-      base_url: baseUrl,
-      field_fallbacks: [],
-      warnings: [],
-      skipped_metrics: [],
-      media_errors: [],
-      counts: {},
-    },
+    manifest: createManifestFragment({
+      startedAt: startedAt.toISOString(),
+      apiVersion,
+      baseUrl,
+    }),
   };
 }
 
