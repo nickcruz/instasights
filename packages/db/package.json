@@ -1,13 +1,14 @@
 {
   "name": "@instagram-insights/db",
   "private": true,
+  "version": "0.0.0",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
   "scripts": {
-    "db:generate": "drizzle-kit generate",
-    "db:push": "drizzle-kit push"
+    "db:generate": "yarn drizzle-kit generate --config ../../drizzle.config.ts",
+    "db:push": "yarn drizzle-kit push --config ../../drizzle.config.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",
