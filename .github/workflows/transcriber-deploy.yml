@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AWS_REGION: ${{ vars.AWS_REGION }}
+      CDK_OUTPUTS_FILE: ${{ github.workspace }}/cdk-outputs.json
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -43,7 +44,7 @@ jobs:
         run: |
           yarn workspace @instagram-insights/infra cdk deploy \
             --require-approval never \
-            --outputs-file cdk-outputs.json \
+            --outputs-file "${CDK_OUTPUTS_FILE}" \
             InstagramInsightsTranscriberBootstrap
 
       - name: Read ECR repository URI
@@ -53,7 +54,7 @@ jobs:
           import json
           import os
 
-          with open("cdk-outputs.json", "r", encoding="utf-8") as handle:
+          with open(os.environ["CDK_OUTPUTS_FILE"], "r", encoding="utf-8") as handle:
               outputs = json.load(handle)
 
           repository_uri = outputs["InstagramInsightsTranscriberBootstrap"]["RepositoryUri"]
@@ -80,7 +81,7 @@ jobs:
         run: |
           yarn workspace @instagram-insights/infra cdk deploy \
             --require-approval never \
-            --outputs-file cdk-outputs.json \
+            --outputs-file "${CDK_OUTPUTS_FILE}" \
             --context imageTag="${IMAGE_TAG}" \
             --context transcriberApiKey="${TRANSCRIBER_API_KEY}" \
             InstagramInsightsTranscriberService
@@ -92,7 +93,7 @@ jobs:
           import json
           import os
 
-          with open("cdk-outputs.json", "r", encoding="utf-8") as handle:
+          with open(os.environ["CDK_OUTPUTS_FILE"], "r", encoding="utf-8") as handle:
               outputs = json.load(handle)
 
           api_base_url = outputs["InstagramInsightsTranscriberService"]["ApiBaseUrl"]
