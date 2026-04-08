@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import posthog from "posthog-js";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -121,8 +122,15 @@ export function ManualSyncCard({
 
       const nextRun = await loadSyncRun(payload.syncRunId);
       setSyncRun(nextRun);
+      posthog.capture("instagram_sync_initiated", {
+        sync_run_id: payload.syncRunId,
+        workflow_run_id: payload.workflowRunId,
+      });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Instagram sync failed.");
+      const errorMessage = cause instanceof Error ? cause.message : "Instagram sync failed.";
+      posthog.capture("instagram_sync_error", { error: errorMessage });
+      posthog.captureException(cause);
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

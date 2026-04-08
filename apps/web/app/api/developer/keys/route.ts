@@ -7,6 +7,7 @@ import {
 import { auth } from "@/lib/auth";
 import { createJsonResponse } from "@/lib/developer-api-auth";
 import { generateDeveloperApiKey } from "@/lib/developer-api-keys";
+import { getPostHogClient } from "@/lib/posthog-server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -72,6 +73,12 @@ export async function POST(request: Request) {
 
   const keys = await listDeveloperApiKeySummariesByUserId(userId);
   const key = keys.find((item) => item.id === createdKey.id) ?? null;
+
+  getPostHogClient().capture({
+    distinctId: userId,
+    event: "developer_api_key_created_server",
+    properties: { key_name: name, key_prefix: generatedKey.keyPrefix },
+  });
 
   return createJsonResponse(
     {

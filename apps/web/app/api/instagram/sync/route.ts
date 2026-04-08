@@ -9,6 +9,7 @@ import { NextResponse } from "next/server";
 import { start } from "workflow/api";
 
 import { auth } from "@/lib/auth";
+import { getPostHogClient } from "@/lib/posthog-server";
 import { instagramFullSyncWorkflow } from "@/workflows/instagram-full-sync";
 
 export const runtime = "nodejs";
@@ -62,6 +63,17 @@ export async function POST() {
       statusMessage: "Sync queued",
     });
 
+    getPostHogClient().capture({
+      distinctId: userId,
+      event: "instagram_sync_queued",
+      properties: {
+        sync_run_id: syncRun.id,
+        workflow_run_id: run.runId,
+        trigger_type: "manual",
+        instagram_account_id: instagramAccount.id,
+      },
+    });
+
     return NextResponse.json(
       {
         syncRunId: syncRun.id,
@@ -73,6 +85,15 @@ export async function POST() {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Instagram sync failed.";
+    getPostHogClient().capture({
+      distinctId: userId,
+      event: "instagram_sync_queue_failed",
+      properties: {
+        sync_run_id: syncRun.id,
+        trigger_type: "manual",
+        error: message,
+      },
+    });
     await markInstagramSyncRunFailed({
       runId: syncRun.id,
       error: message,

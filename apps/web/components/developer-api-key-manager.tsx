@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { DeveloperApiKeySummary } from "@instagram-insights/contracts";
+import posthog from "posthog-js";
 
 import { Button } from "@/components/ui/button";
 import { CopySnippet } from "@/components/copy-snippet";
@@ -66,8 +67,10 @@ export function DeveloperApiKeyManager({
         setKeys((current) => [payload.key!, ...current]);
       }
 
+      posthog.capture("developer_api_key_created", { key_name: name });
       setName("Codex access");
     } catch (cause) {
+      posthog.captureException(cause);
       setError(
         cause instanceof Error ? cause.message : "Unable to create API key.",
       );
@@ -106,7 +109,9 @@ export function DeveloperApiKeyManager({
             : key,
         ),
       );
+      posthog.capture("developer_api_key_revoked", { key_id: keyId });
     } catch (cause) {
+      posthog.captureException(cause);
       setError(
         cause instanceof Error ? cause.message : "Unable to revoke API key.",
       );

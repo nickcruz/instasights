@@ -1,6 +1,7 @@
 "use client";
 
 import { signIn, signOut } from "next-auth/react";
+import posthog from "posthog-js";
 
 import { Button } from "@/components/ui/button";
 
@@ -26,6 +27,8 @@ export function AuthControls({
       <Button
         variant="outline"
         onClick={() => {
+          posthog.capture("sign_out_clicked");
+          posthog.reset();
           void signOut({ callbackUrl: "/" });
         }}
       >
@@ -37,6 +40,7 @@ export function AuthControls({
   return (
     <Button
       onClick={() => {
+        posthog.capture("sign_in_clicked", { provider: "google" });
         void signIn("google", { callbackUrl: "/profile" });
       }}
     >

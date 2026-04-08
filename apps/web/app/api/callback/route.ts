@@ -14,6 +14,7 @@ import {
   fetchInstagramProfile,
   isInstagramConfigured,
 } from "@/lib/instagram-oauth";
+import { getPostHogClient } from "@/lib/posthog-server";
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -42,6 +43,11 @@ export async function GET(request: Request) {
   const expectedState = cookieStore.get(INSTAGRAM_STATE_COOKIE)?.value;
 
   if (error) {
+    getPostHogClient().capture({
+      distinctId: userId,
+      event: "instagram_link_failed",
+      properties: { reason: "oauth_error", error },
+    });
     const response = NextResponse.redirect(
       new URL(
         `/profile?instagram=error&message=${encodeURIComponent(error)}`,
@@ -54,6 +60,11 @@ export async function GET(request: Request) {
   }
 
   if (!code || !state || !expectedState || state !== expectedState) {
+    getPostHogClient().capture({
+      distinctId: userId,
+      event: "instagram_link_failed",
+      properties: { reason: "state_mismatch" },
+    });
     const response = NextResponse.redirect(
       new URL("/profile?instagram=state-error", request.url),
       { status: 302 },
@@ -78,6 +89,14 @@ export async function GET(request: Request) {
       linkedAt: new Date(),
       rawProfile: profile.rawProfile,
     });
+    getPostHogClient().capture({
+      distinctId: userId,
+      event: "instagram_linked",
+      properties: {
+        instagram_username: profile.username,
+        instagram_user_id: profile.instagramUserId || tokenPayload.instagramUserId || "",
+      },
+    });
     const response = NextResponse.redirect(
       new URL("/profile?instagram=linked", request.url),
       { status: 302 },
@@ -90,6 +109,11 @@ export async function GET(request: Request) {
   } catch (cause) {
     const message =
       cause instanceof Error ? cause.message : "Instagram OAuth failed.";
+    getPostHogClient().capture({
+      distinctId: userId,
+      event: "instagram_link_failed",
+      properties: { reason: "exchange_error", error: message },
+    });
     const response = NextResponse.redirect(
       new URL(
         `/profile?instagram=error&message=${encodeURIComponent(message)}`,
