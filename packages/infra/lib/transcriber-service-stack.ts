@@ -52,8 +52,8 @@ export class TranscriberServiceStack extends Stack {
       this,
       "TranscriberTaskDefinition",
       {
-        cpu: 2048,
-        memoryLimitMiB: 4096,
+        cpu: 512,
+        memoryLimitMiB: 2048,
         runtimePlatform: {
           cpuArchitecture: ecs.CpuArchitecture.X86_64,
           operatingSystemFamily: ecs.OperatingSystemFamily.LINUX,
@@ -179,7 +179,7 @@ export class TranscriberServiceStack extends Stack {
 
     const scaling = service.autoScaleTaskCount({
       minCapacity: 1,
-      maxCapacity: 3,
+      maxCapacity: 2,
     });
 
     scaling.scaleOnCpuUtilization("CpuScaling", {
