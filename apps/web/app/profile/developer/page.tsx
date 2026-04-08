@@ -42,6 +42,7 @@ export default async function DeveloperAccessPage() {
   const codexInstall = `export INSTAGRAM_INSIGHTS_API_KEY="paste-your-key"\ncodex mcp add instagram-insights --url ${appUrl}/mcp --bearer-token-env-var INSTAGRAM_INSIGHTS_API_KEY`;
   const claudeInstall = `export INSTAGRAM_INSIGHTS_API_KEY="paste-your-key"\nclaude mcp add --transport http instagram-insights ${appUrl}/mcp --header "Authorization: Bearer $INSTAGRAM_INSIGHTS_API_KEY"`;
   const smokeTest = `curl -H "Authorization: Bearer $INSTAGRAM_INSIGHTS_API_KEY" \\\n  ${appUrl}/api/v1/account`;
+  const triggerSync = `curl -X POST \\\n  -H "Authorization: Bearer $INSTAGRAM_INSIGHTS_API_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"force":false,"staleAfterHours":12}' \\\n  ${appUrl}/api/v1/sync-runs`;
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(29,107,87,0.18),transparent_30%),linear-gradient(180deg,#f7efe2_0%,#f3eadc_35%,#efe4d6_100%)] px-6 py-10 md:px-10">
@@ -153,7 +154,7 @@ export default async function DeveloperAccessPage() {
               </div>
               <CardTitle>Existing keys</CardTitle>
               <CardDescription>
-                Personal API keys stay read-only and can be revoked from this screen.
+                Personal API keys can read data and queue workflow-backed syncs for this user.
               </CardDescription>
             </CardHeader>
             <CardContent className="text-sm text-[var(--muted-foreground)]">
@@ -184,6 +185,12 @@ export default async function DeveloperAccessPage() {
           title="Smoke Test"
           description="Confirm the key can read your account overview through the REST API."
           value={smokeTest}
+        />
+
+        <CopySnippet
+          title="Queue Sync"
+          description="Use the REST API to queue a full sync when the latest data is stale."
+          value={triggerSync}
         />
       </div>
     </main>

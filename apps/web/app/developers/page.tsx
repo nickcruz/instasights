@@ -28,11 +28,13 @@ const endpointRows = [
   ["GET", "/api/v1/media/:mediaId", "Full detail for one media item."],
   ["GET", "/api/v1/sync-runs", "Cursor-paginated sync run history."],
   ["GET", "/api/v1/sync-runs/:syncRunId", "Detailed sync run payload."],
+  ["POST", "/api/v1/sync-runs", "Queue a workflow-backed full sync, with stale-check or force options."],
   ["GET", "/api/v1/schema/tables", "Curated table documentation."],
 ];
 
 const promptExamples = [
   "Use get_account_overview and tell me whether my latest sync looks healthy.",
+  "If the latest completed sync is older than 12 hours, call trigger_sync and poll get_sync_run until it completes.",
   "Read schema://table/instagram_media_item and then list my latest REELS posts from the last 30 days.",
   "Compare my two most recent completed sync runs and summarize any changes in reach or warnings.",
 ];
@@ -51,6 +53,7 @@ export default async function DevelopersPage() {
   const codexInstall = `export INSTAGRAM_INSIGHTS_API_KEY="paste-your-key"\ncodex mcp add instagram-insights --url ${appUrl}/mcp --bearer-token-env-var INSTAGRAM_INSIGHTS_API_KEY`;
   const claudeInstall = `export INSTAGRAM_INSIGHTS_API_KEY="paste-your-key"\nclaude mcp add --transport http instagram-insights ${appUrl}/mcp --header "Authorization: Bearer $INSTAGRAM_INSIGHTS_API_KEY"`;
   const smokeTest = `curl -H "Authorization: Bearer $INSTAGRAM_INSIGHTS_API_KEY" \\\n  ${appUrl}/api/v1/account`;
+  const triggerSync = `curl -X POST \\\n  -H "Authorization: Bearer $INSTAGRAM_INSIGHTS_API_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"force":false,"staleAfterHours":12}' \\\n  ${appUrl}/api/v1/sync-runs`;
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(29,107,87,0.18),transparent_30%),linear-gradient(180deg,#f7efe2_0%,#f3eadc_35%,#efe4d6_100%)] px-6 py-10 md:px-10">
@@ -193,6 +196,12 @@ export default async function DevelopersPage() {
           title="Smoke Test"
           description="Verify that your key can read the authenticated account overview through the hosted REST API."
           value={smokeTest}
+        />
+
+        <CopySnippet
+          title="Queue Sync"
+          description="Queue a workflow-backed full sync through the hosted REST API when the latest data is stale."
+          value={triggerSync}
         />
 
         <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
