@@ -89,6 +89,12 @@ export class TranscriberServiceStack extends Stack {
       },
     );
 
+    loadBalancerSecurityGroup.addIngressRule(
+      ec2.Peer.ipv4(vpc.vpcCidrBlock),
+      ec2.Port.tcp(80),
+      "Allow VPC traffic to the internal ALB",
+    );
+
     const serviceSecurityGroup = new ec2.SecurityGroup(
       this,
       "ServiceSecurityGroup",
