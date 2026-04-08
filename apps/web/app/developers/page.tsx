@@ -16,7 +16,7 @@ const flowSteps = [
   "Sign in to the app with Google.",
   "Link your Instagram professional account.",
   "Run a full sync so the database has data for your user.",
-  "Create a personal API key in the Developer Access screen.",
+  "Create a personal API key in the Developer Access screen if you want REST or non-OAuth MCP access.",
   "Install the hosted MCP in Codex or Claude Code.",
   "Verify with a quick `curl` request or an MCP tool call.",
 ];
@@ -51,7 +51,7 @@ const deployChecklist = [
 export default async function DevelopersPage() {
   const appUrl = await getAppUrl();
   const codexInstall = `export INSTAGRAM_INSIGHTS_API_KEY="paste-your-key"\ncodex mcp add instagram-insights --url ${appUrl}/mcp --bearer-token-env-var INSTAGRAM_INSIGHTS_API_KEY`;
-  const claudeInstall = `export INSTAGRAM_INSIGHTS_API_KEY="paste-your-key"\nclaude mcp add --transport http instagram-insights ${appUrl}/mcp --header "Authorization: Bearer $INSTAGRAM_INSIGHTS_API_KEY"`;
+  const claudeInstall = `claude mcp add --transport http instagram-insights ${appUrl}/mcp`;
   const smokeTest = `curl -H "Authorization: Bearer $INSTAGRAM_INSIGHTS_API_KEY" \\\n  ${appUrl}/api/v1/account`;
   const triggerSync = `curl -X POST \\\n  -H "Authorization: Bearer $INSTAGRAM_INSIGHTS_API_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"force":false,"staleAfterHours":12}' \\\n  ${appUrl}/api/v1/sync-runs`;
 
@@ -187,7 +187,7 @@ export default async function DevelopersPage() {
           />
           <CopySnippet
             title="Claude Code Install"
-            description="Use the same personal API key and point Claude Code at the hosted `/mcp` endpoint."
+            description="Claude Code can use the hosted MCP's OAuth flow directly. It will open the browser, let the user sign in, and exchange an OAuth token automatically."
             value={claudeInstall}
           />
         </div>

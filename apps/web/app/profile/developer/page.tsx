@@ -40,7 +40,7 @@ export default async function DeveloperAccessPage() {
   ]);
 
   const codexInstall = `export INSTAGRAM_INSIGHTS_API_KEY="paste-your-key"\ncodex mcp add instagram-insights --url ${appUrl}/mcp --bearer-token-env-var INSTAGRAM_INSIGHTS_API_KEY`;
-  const claudeInstall = `export INSTAGRAM_INSIGHTS_API_KEY="paste-your-key"\nclaude mcp add --transport http instagram-insights ${appUrl}/mcp --header "Authorization: Bearer $INSTAGRAM_INSIGHTS_API_KEY"`;
+  const claudeInstall = `claude mcp add --transport http instagram-insights ${appUrl}/mcp`;
   const smokeTest = `curl -H "Authorization: Bearer $INSTAGRAM_INSIGHTS_API_KEY" \\\n  ${appUrl}/api/v1/account`;
   const triggerSync = `curl -X POST \\\n  -H "Authorization: Bearer $INSTAGRAM_INSIGHTS_API_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"force":false,"staleAfterHours":12}' \\\n  ${appUrl}/api/v1/sync-runs`;
 
@@ -176,7 +176,7 @@ export default async function DeveloperAccessPage() {
           />
           <CopySnippet
             title="Claude Code Install"
-            description="Claude Code can point at the same hosted MCP URL with a bearer header."
+            description="Claude Code can use the hosted MCP's OAuth flow directly, so no personal API key is required for the MCP install."
             value={claudeInstall}
           />
         </div>

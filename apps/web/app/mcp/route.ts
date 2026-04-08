@@ -10,14 +10,14 @@ import {
 import { handleInstagramInsightsMcpRequest } from "@instagram-insights/mcp";
 import { start } from "workflow/api";
 
-import { requireDeveloperApiKey } from "@/lib/developer-api-auth";
+import { requireMcpAccess } from "@/lib/mcp-oauth";
 import { instagramFullSyncWorkflow } from "@/workflows/instagram-full-sync";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 async function handleRequest(request: Request) {
-  const authResult = await requireDeveloperApiKey(request);
+  const authResult = await requireMcpAccess(request);
 
   if (!authResult.ok) {
     return authResult.response;

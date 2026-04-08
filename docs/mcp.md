@@ -10,7 +10,10 @@ The hosted MCP is exposed by the Next.js app at:
 https://YOUR_APP_DOMAIN/mcp
 ```
 
-It is authenticated with a personal developer API key created in the web app.
+It supports two auth modes:
+
+- Claude Code remote MCP via OAuth 2.0
+- Personal developer API keys for REST, Codex, and non-OAuth clients
 
 The MCP currently exposes tools for:
 
@@ -21,6 +24,18 @@ The MCP currently exposes tools for:
 - Triggering a full sync when data is stale
 
 ## Authentication
+
+### Claude Code OAuth
+
+Claude Code can connect directly to the hosted MCP URL and complete OAuth in the browser:
+
+```bash
+claude mcp add --transport http instagram-insights https://YOUR_APP_DOMAIN/mcp
+```
+
+The hosted MCP advertises standard OAuth metadata and will redirect the user through the app's Google sign-in flow before issuing an MCP access token.
+
+### Personal API Key
 
 The MCP expects:
 

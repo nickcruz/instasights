@@ -20,6 +20,10 @@ import {
   instagramAccounts,
   instagramMediaItems,
   instagramSyncRuns,
+  mcpOAuthAccessTokens,
+  mcpOAuthAuthorizationCodes,
+  mcpOAuthClients,
+  mcpOAuthRefreshTokens,
 } from "./schema";
 
 type InstagramAccountInput = {
@@ -98,6 +102,42 @@ type RawSyncRun = typeof instagramSyncRuns.$inferSelect;
 type RawInstagramAccount = typeof instagramAccounts.$inferSelect;
 type RawMediaItem = typeof instagramMediaItems.$inferSelect;
 type RawApiKey = typeof developerApiKeys.$inferSelect;
+type RawMcpOAuthClient = typeof mcpOAuthClients.$inferSelect;
+type RawMcpOAuthAccessToken = typeof mcpOAuthAccessTokens.$inferSelect;
+type RawMcpOAuthRefreshToken = typeof mcpOAuthRefreshTokens.$inferSelect;
+
+type McpOAuthClientInput = {
+  clientId: string;
+  clientSecretHash?: string | null;
+  clientName?: string | null;
+  redirectUris: string[];
+  tokenEndpointAuthMethod: string;
+  grantTypes: string[];
+  responseTypes: string[];
+  scope?: string | null;
+  metadata?: Record<string, unknown> | null;
+};
+
+type McpOAuthAuthorizationCodeInput = {
+  codeHash: string;
+  clientDbId: string;
+  userId: string;
+  redirectUri: string;
+  scope?: string | null;
+  resource?: string | null;
+  codeChallenge: string;
+  codeChallengeMethod: string;
+  expiresAt: Date;
+};
+
+type McpOAuthTokenInput = {
+  tokenHash: string;
+  clientDbId: string;
+  userId: string;
+  scope?: string | null;
+  resource?: string | null;
+  expiresAt: Date;
+};
 
 function toDate(value: unknown) {
   if (!value) {
@@ -132,6 +172,14 @@ function toRecord(value: unknown) {
 
 function toArray(value: unknown) {
   return Array.isArray(value) ? value : null;
+}
+
+function toStringArray(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter((entry): entry is string => typeof entry === "string");
 }
 
 function clampLimit(value: number | undefined, fallback = 25, max = 100) {
@@ -276,6 +324,25 @@ function serializeApiKey(
   };
 }
 
+function serializeMcpOAuthClient(
+  row: RawMcpOAuthClient,
+) {
+  return {
+    id: row.id,
+    clientId: row.clientId,
+    clientSecretHash: row.clientSecretHash ?? null,
+    clientName: row.clientName ?? null,
+    redirectUris: toStringArray(row.redirectUris),
+    tokenEndpointAuthMethod: row.tokenEndpointAuthMethod,
+    grantTypes: toStringArray(row.grantTypes),
+    responseTypes: toStringArray(row.responseTypes),
+    scope: row.scope ?? null,
+    metadata: toRecord(row.metadata),
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
 const mediaSortAtExpression =
   sql<Date>`coalesce(${instagramMediaItems.postedAt}, ${instagramMediaItems.syncedAt}, ${instagramMediaItems.createdAt})`;
 
@@ -413,6 +480,194 @@ export async function revokeDeveloperApiKey(input: {
           eq(developerApiKeys.userId, input.userId),
         ),
       )
+      .returning()
+  )[0] ?? null;
+}
+
+export async function createMcpOAuthClient(input: McpOAuthClientInput) {
+  return (
+    await getDb()
+      .insert(mcpOAuthClients)
+      .values({
+        clientId: input.clientId,
+        clientSecretHash: input.clientSecretHash ?? null,
+        clientName: input.clientName ?? null,
+        redirectUris: input.redirectUris,
+        tokenEndpointAuthMethod: input.tokenEndpointAuthMethod,
+        grantTypes: input.grantTypes,
+        responseTypes: input.responseTypes,
+        scope: input.scope ?? null,
+        metadata: input.metadata ?? null,
+        updatedAt: new Date(),
+      })
+      .returning()
+  )[0];
+}
+
+export async function getMcpOAuthClientByClientId(clientId: string) {
+  const row =
+    (
+      await getDb()
+        .select()
+        .from(mcpOAuthClients)
+        .where(eq(mcpOAuthClients.clientId, clientId))
+        .limit(1)
+    )[0] ?? null;
+
+  return row ? serializeMcpOAuthClient(row) : null;
+}
+
+export async function createMcpOAuthAuthorizationCode(
+  input: McpOAuthAuthorizationCodeInput,
+) {
+  return (
+    await getDb()
+      .insert(mcpOAuthAuthorizationCodes)
+      .values({
+        codeHash: input.codeHash,
+        clientId: input.clientDbId,
+        userId: input.userId,
+        redirectUri: input.redirectUri,
+        scope: input.scope ?? null,
+        resource: input.resource ?? null,
+        codeChallenge: input.codeChallenge,
+        codeChallengeMethod: input.codeChallengeMethod,
+        expiresAt: input.expiresAt,
+      })
+      .returning()
+  )[0];
+}
+
+export async function consumeMcpOAuthAuthorizationCode(codeHash: string) {
+  const db = getDb();
+  const now = new Date();
+  const row =
+    (
+      await db
+        .select({
+          code: mcpOAuthAuthorizationCodes,
+          client: mcpOAuthClients,
+        })
+        .from(mcpOAuthAuthorizationCodes)
+        .innerJoin(
+          mcpOAuthClients,
+          eq(mcpOAuthAuthorizationCodes.clientId, mcpOAuthClients.id),
+        )
+        .where(eq(mcpOAuthAuthorizationCodes.codeHash, codeHash))
+        .limit(1)
+    )[0] ?? null;
+
+  if (!row) {
+    return null;
+  }
+
+  const { code, client } = row;
+
+  if (code.consumedAt || code.expiresAt.getTime() <= now.getTime()) {
+    return null;
+  }
+
+  await db
+    .update(mcpOAuthAuthorizationCodes)
+    .set({
+      consumedAt: now,
+    })
+    .where(eq(mcpOAuthAuthorizationCodes.id, code.id));
+
+  return {
+    code,
+    client: serializeMcpOAuthClient(client),
+  };
+}
+
+export async function createMcpOAuthAccessToken(input: McpOAuthTokenInput) {
+  return (
+    await getDb()
+      .insert(mcpOAuthAccessTokens)
+      .values({
+        tokenHash: input.tokenHash,
+        clientId: input.clientDbId,
+        userId: input.userId,
+        scope: input.scope ?? null,
+        resource: input.resource ?? null,
+        expiresAt: input.expiresAt,
+        updatedAt: new Date(),
+      })
+      .returning()
+  )[0];
+}
+
+export async function createMcpOAuthRefreshToken(input: McpOAuthTokenInput) {
+  return (
+    await getDb()
+      .insert(mcpOAuthRefreshTokens)
+      .values({
+        tokenHash: input.tokenHash,
+        clientId: input.clientDbId,
+        userId: input.userId,
+        scope: input.scope ?? null,
+        resource: input.resource ?? null,
+        expiresAt: input.expiresAt,
+        updatedAt: new Date(),
+      })
+      .returning()
+  )[0];
+}
+
+export async function getMcpOAuthAccessTokenByHash(tokenHash: string) {
+  return (
+    await getDb()
+      .select({
+        token: mcpOAuthAccessTokens,
+        client: mcpOAuthClients,
+      })
+      .from(mcpOAuthAccessTokens)
+      .innerJoin(mcpOAuthClients, eq(mcpOAuthAccessTokens.clientId, mcpOAuthClients.id))
+      .where(eq(mcpOAuthAccessTokens.tokenHash, tokenHash))
+      .limit(1)
+  )[0] ?? null;
+}
+
+export async function getMcpOAuthRefreshTokenByHash(tokenHash: string) {
+  return (
+    await getDb()
+      .select({
+        token: mcpOAuthRefreshTokens,
+        client: mcpOAuthClients,
+      })
+      .from(mcpOAuthRefreshTokens)
+      .innerJoin(mcpOAuthClients, eq(mcpOAuthRefreshTokens.clientId, mcpOAuthClients.id))
+      .where(eq(mcpOAuthRefreshTokens.tokenHash, tokenHash))
+      .limit(1)
+  )[0] ?? null;
+}
+
+export async function touchMcpOAuthAccessTokenLastUsed(tokenId: string) {
+  return (
+    await getDb()
+      .update(mcpOAuthAccessTokens)
+      .set({
+        lastUsedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(mcpOAuthAccessTokens.id, tokenId))
+      .returning()
+  )[0] ?? null;
+}
+
+export async function revokeMcpOAuthRefreshToken(input: {
+  tokenId: string;
+  replacedByTokenId?: string | null;
+}) {
+  return (
+    await getDb()
+      .update(mcpOAuthRefreshTokens)
+      .set({
+        revokedAt: new Date(),
+        replacedByTokenId: input.replacedByTokenId ?? null,
+        updatedAt: new Date(),
+      })
+      .where(eq(mcpOAuthRefreshTokens.id, input.tokenId))
       .returning()
   )[0] ?? null;
 }
