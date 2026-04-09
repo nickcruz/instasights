@@ -15,7 +15,7 @@ Instagram Insights is a Claude-first Instagram analytics workflow built around a
 
 ## What This Repo Contains
 
-- A hosted web app in `apps/web` that exposes `/mcp`, OAuth routes, `/api/v1/*`, Instagram auth handoffs, and the minimal install/troubleshooting UI.
+- A hosted web app in `apps/web` that exposes `/`, `/developers`, `/mcp`, OAuth routes, `/api/v1/*`, Instagram auth handoffs, and the minimal install/troubleshooting UI.
 - Shared packages in `packages/*` for MCP behavior, contracts, database access, and infrastructure definitions.
 - A transcriber service in `services/transcriber` used by the sync pipeline.
 - A Claude plugin bundle in `plugins/instagram-insights`, with the public marketplace catalog published from `kingscrosslabs/marketplace`.
@@ -35,11 +35,13 @@ After install, run:
 /instagram-insights:setup
 ```
 
-Claude authenticates the hosted MCP server through OAuth, stores its own credentials locally, and then uses the bundled plugin skills to connect Instagram, sync, and analyze.
+Claude starts the hosted MCP OAuth flow, the app root finishes the first-party Google sign-in step, and then Claude stores its own credentials locally before using the bundled plugin skills to connect Instagram, sync, and analyze.
 
 ## Hosted Architecture
 
 - `apps/web` is the orchestration layer for:
+  - `/`
+  - `/developers`
   - `/mcp`
   - `/.well-known/oauth-*`
   - `/oauth/*`

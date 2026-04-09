@@ -9,7 +9,7 @@ Use this skill for Instagram performance analysis, content pattern reviews, and 
 Workflow:
 
 1. Call `get_setup_status` first.
-2. If the account is not linked, direct the user to `instagramLinkUrl`.
+2. If the account is not linked, direct the user to `instagramLinkUrl` and note that it should be opened in the same browser session created during the root handoff from Claude.
 3. If there is no completed sync, or the user explicitly wants the latest data, call `/instagram-insights:sync` behavior through `trigger_sync` and `get_sync_run` before analyzing.
 4. Use `get_latest_snapshot` for account-level analysis.
 5. Use `list_media` for recent content lists and `get_media` for post-level drilldowns.

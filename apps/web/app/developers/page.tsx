@@ -61,21 +61,21 @@ export default async function DevelopersPage({
           <CardContent className="grid gap-8 p-8 md:grid-cols-[1.1fr_0.9fr] md:p-10">
             <div className="space-y-5">
               <div className="inline-flex rounded-full border border-[var(--border)] bg-[var(--secondary)] px-4 py-1.5 text-sm text-[var(--secondary-foreground)]">
-                Claude plugin first
+                Support and troubleshooting
               </div>
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[var(--muted-foreground)]">
                   Instagram Insights
                 </p>
                 <h1 className="mt-3 max-w-3xl font-heading text-5xl leading-none md:text-7xl">
-                  Install the Claude plugin, authenticate once, and let Claude run the workflow.
+                  Support the Claude connector, verify auth, and keep the workflow healthy.
                 </h1>
               </div>
               <p className="max-w-2xl text-lg leading-8 text-[var(--muted-foreground)]">
-                The hosted app is now the backend and auth handoff layer for the
-                Claude plugin. The primary flow is Claude plugin install,
-                Claude-managed MCP OAuth, Instagram linking, and LLM-driven sync
-                orchestration.
+                Claude now lands users on the app root to finish the first-party
+                Google sign-in step, then resumes the MCP OAuth flow back to
+                Claude Desktop. This page is the support surface for status
+                checks, Instagram reconnects, and compatibility workflows.
               </p>
               <div className="flex flex-wrap gap-3">
                 <AuthControls
@@ -173,8 +173,8 @@ export default async function DevelopersPage({
               </div>
               <CardTitle>Claude OAuth</CardTitle>
               <CardDescription>
-                Claude owns the MCP OAuth token and stores it locally after the
-                browser sign-in flow.
+                Claude starts connector consent, then this app finishes the
+                Google login step before returning users to Claude Desktop.
               </CardDescription>
             </CardHeader>
           </Card>
@@ -186,8 +186,8 @@ export default async function DevelopersPage({
               </div>
               <CardTitle>Instagram handoff</CardTitle>
               <CardDescription>
-                After Claude auth is done, the connect flow uses the same browser
-                session at {appUrl}.
+                After connector sign-in completes on the app root, Instagram
+                linking reuses that same browser session at {appUrl}.
               </CardDescription>
             </CardHeader>
           </Card>
@@ -210,17 +210,18 @@ export default async function DevelopersPage({
           <CardHeader>
             <CardTitle>Plugin Workflow</CardTitle>
             <CardDescription>
-              The intended user journey is now plugin-first and LLM-orchestrated.
+              The connector flow now mirrors the Linear-style handoff pattern.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2">
             {[
               "1. Add the GitHub repo as a Claude marketplace.",
               "2. Install instagram-insights@kingscrosslabs-marketplace.",
-              "3. Let Claude authenticate the hosted MCP through browser OAuth.",
-              "4. Run /instagram-insights:setup.",
-              "5. If prompted, open the Instagram link handoff and finish the Meta OAuth flow.",
-              "6. Let Claude trigger or poll sync runs as needed.",
+              "3. Connect instagram insights in Claude Desktop and approve Claude's MCP consent screen.",
+              "4. Finish Google sign-in on the app root, then let Claude resume automatically.",
+              "5. Run /instagram-insights:setup.",
+              "6. If prompted, open the Instagram link handoff and finish the Meta OAuth flow.",
+              "7. Let Claude trigger or poll sync runs as needed.",
             ].map((step) => (
               <div
                 key={step}

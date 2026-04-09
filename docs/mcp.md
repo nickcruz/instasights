@@ -19,7 +19,7 @@ The plugin bundles one remote HTTP MCP server that points at:
 https://project-qah0p.vercel.app/mcp
 ```
 
-During install, Claude authenticates that MCP server with the hosted OAuth flow. Google sign-in happens there; the plugin does not store its own tokens.
+During install, Claude authenticates that MCP server with the hosted OAuth flow, then redirects into the app root so the user can finish the first-party Google sign-in step. The plugin does not store its own tokens outside Claude's local OAuth storage.
 
 For local plugin development, load the local plugin bundle:
 
@@ -54,7 +54,7 @@ Claude should authenticate to the hosted MCP with OAuth. The server supports sta
 - `/.well-known/oauth-protected-resource`
 - `/oauth/*`
 
-Claude stores the MCP access token locally. The plugin should not write custom secret files or plugin-managed token caches.
+Claude stores the MCP access token locally. The app root (`/`) is the primary browser handoff page that resumes the original OAuth request after Google sign-in. The plugin should not write custom secret files or plugin-managed token caches.
 
 ### Compatibility path: developer API keys
 
@@ -92,6 +92,8 @@ Use this first for plugin orchestration. It returns:
 - the recommended next action and prompt
 
 This is the best entrypoint for setup, connect, and sync skills.
+
+When `status` is `not_linked`, `instagramLinkUrl` should be opened in the same browser session created during the connector sign-in handoff on `/`.
 
 ### `get_account_overview`
 

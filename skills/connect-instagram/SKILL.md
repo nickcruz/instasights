@@ -10,7 +10,7 @@ Workflow:
 
 1. Call `get_setup_status`.
 2. If the account is already linked, say so clearly and include the linked username when available.
-3. If the account is not linked, give the user the `instagramLinkUrl` and tell them to open it in a browser.
+3. If the account is not linked, give the user the `instagramLinkUrl`, tell them it reuses the browser session created during the root handoff from Claude, and ask them to open it in a browser.
 4. After they complete the browser handoff, tell them to rerun `/instagram-insights:setup` or `/instagram-insights:sync`.
 
 Rules:

@@ -6,6 +6,8 @@ This document covers how the hosted Instagram Insights backend is deployed and h
 
 The hosted web app continues to provide the backend and orchestration layer for:
 
+- `/`
+- `/developers`
 - `/mcp`
 - `/.well-known/oauth-*`
 - `/oauth/*`
@@ -15,7 +17,7 @@ The hosted web app continues to provide the backend and orchestration layer for:
 - the workflow-backed sync job
 - the Whisper transcriber service
 
-The product UI is intentionally minimal. `/developers` is the supported human-facing page for install guidance and troubleshooting. `/auth/complete` is the thin Instagram callback completion surface. Legacy `/`, `/profile`, and `/profile/developer` routes redirect into the new flow.
+The product UI is intentionally minimal. `/` is the connector-auth handoff that resumes Claude's OAuth flow after Google sign-in. `/developers` is the supported human-facing page for install guidance and troubleshooting. `/auth/complete` is the thin Instagram callback completion surface. Legacy `/profile` and `/profile/developer` routes redirect into the new flow.
 
 ## Primary user install flow
 
@@ -35,7 +37,7 @@ The public marketplace catalog now lives in the Kings Cross Labs marketplace rep
 - `plugins/instagram-insights/.mcp.json` bundles the hosted remote MCP server
 - `plugins/instagram-insights/skills/*` provides Claude-visible setup, connect, sync, and analysis skills
 
-Google auth is handled by Claude’s MCP OAuth flow. Instagram linking stays a thin hosted browser handoff through `/api/login` and `/api/callback`.
+Claude handles the connector consent screen first. The app root then handles first-party Google sign-in and resumes the original OAuth request back to Claude. Instagram linking stays a thin hosted browser handoff through `/api/login` and `/api/callback`.
 
 ## Backend behavior that stays the same
 
@@ -86,7 +88,7 @@ Recommended:
 
 Notes:
 
-- `APP_URL` should be the canonical public origin shown on `/developers`
+- `APP_URL` should be the canonical public origin used for `/` and `/developers`
 - `INSTAGRAM_APP_URL` should match the public deployed origin unless Instagram auth is intentionally split out
 - `INSTAGRAM_REDIRECT_URI` should match the deployed callback route exactly
 
@@ -102,6 +104,7 @@ Before the deployment is treated as production-ready:
 
 1. Push the current branch and deploy the web app to Vercel
 2. Confirm these routes return successfully on the deployed domain:
+   - `/`
    - `/developers`
    - `/auth/complete`
    - `/api/v1/account`
@@ -110,17 +113,19 @@ Before the deployment is treated as production-ready:
 3. Confirm the OAuth metadata endpoints are live:
    - `/.well-known/oauth-authorization-server`
    - `/.well-known/oauth-protected-resource`
-4. Sign in with a real user through `/developers`
-5. Link Instagram through `/api/login`
-6. Trigger a sync and confirm the workflow-backed run completes
-7. Install the Claude plugin from the repository marketplace
-8. Confirm `/instagram-insights:setup` guides the user correctly
+4. Start connector auth from Claude and confirm the browser lands on `/`
+5. Sign in with a real user through the root handoff and confirm Claude resumes automatically
+6. Link Instagram through `/api/login`
+7. Trigger a sync and confirm the workflow-backed run completes
+8. Install the Claude plugin from the repository marketplace
+9. Confirm `/instagram-insights:setup` guides the user correctly
 
 ## Acceptance criteria
 
 The hosted deployment is ready when all of these are true:
 
-- `/developers` renders the Claude-first install instructions
+- `/` renders the connector-auth handoff and resumes Claude after Google sign-in
+- `/developers` renders the Claude-first install instructions and troubleshooting guidance
 - `/auth/complete` handles Instagram callback success and failure states
 - Claude can authenticate the hosted MCP through OAuth
 - `get_setup_status` returns the correct next action for a newly signed-in user

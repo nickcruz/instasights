@@ -8,15 +8,16 @@ import {
   isInstagramConfigured,
 } from "@/lib/instagram-oauth";
 import { INSTAGRAM_STATE_COOKIE } from "@/lib/instagram-link";
+import { buildRootHandoffPath } from "@/lib/return-to";
 
 export async function GET(request: Request) {
   const session = await auth();
 
   if (!session) {
-    const signInUrl = new URL("/api/auth/signin", request.url);
-    signInUrl.searchParams.set("callbackUrl", "/api/login");
-
-    return NextResponse.redirect(signInUrl, { status: 302 });
+    return NextResponse.redirect(
+      new URL(buildRootHandoffPath("/api/login"), request.url),
+      { status: 302 },
+    );
   }
 
   if (!isInstagramConfigured()) {

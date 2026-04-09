@@ -16,6 +16,6 @@ Workflow:
 
 Important behavior:
 
-- Google sign-in is handled by Claude's hosted MCP OAuth flow. Do not tell the user to create API keys as part of the primary setup path.
-- When you provide `instagramLinkUrl`, explain that it uses the same browser session created during Claude MCP authentication.
+- Claude starts the hosted MCP OAuth flow, then Instagram Insights finishes the first-party Google sign-in step on the app root before returning the user to Claude. Do not tell the user to create API keys as part of the primary setup path.
+- When you provide `instagramLinkUrl`, explain that it uses the same browser session created during the app-root sign-in handoff from Claude.
 - If a sync fails, report the error message and current step from `get_sync_run` without inventing fallback analysis.

@@ -15,6 +15,7 @@ import { getAppUrl } from "@/lib/app-url";
 import { auth, isGoogleAuthConfigured } from "@/lib/auth";
 import { resolveBearerAuth } from "@/lib/bearer-auth";
 import { hashOpaqueSecret, MCP_TOOLS_SCOPE } from "@/lib/oauth-shared";
+import { buildRootHandoffPath, normalizeSameOriginReturnTo } from "@/lib/return-to";
 
 const ACCESS_TOKEN_TTL_SECONDS = 60 * 60;
 const REFRESH_TOKEN_TTL_SECONDS = 30 * 24 * 60 * 60;
@@ -285,11 +286,9 @@ export async function getOAuthAuthorizeLoginRedirect(request: Request) {
   }
 
   const appUrl = await getAppUrl();
-  const authorizeUrl = new URL(request.url);
-  const signInUrl = new URL("/oauth/continue", appUrl);
-  signInUrl.searchParams.set("returnTo", authorizeUrl.toString());
+  const authorizePath = normalizeSameOriginReturnTo(request.url, appUrl);
 
-  return signInUrl;
+  return new URL(buildRootHandoffPath(authorizePath ?? "/developers"), appUrl);
 }
 
 export async function requireAuthorizedUserForOAuth(request: Request) {

@@ -8,11 +8,15 @@ import { Button } from "@/components/ui/button";
 type AuthControlsProps = {
   isAuthenticated: boolean;
   googleAvailable: boolean;
+  callbackUrl?: string;
+  signInLabel?: string;
 };
 
 export function AuthControls({
   isAuthenticated,
   googleAvailable,
+  callbackUrl = "/developers",
+  signInLabel = "Sign in with Google",
 }: AuthControlsProps) {
   if (!googleAvailable) {
     return (
@@ -41,10 +45,10 @@ export function AuthControls({
     <Button
       onClick={() => {
         posthog.capture("sign_in_clicked", { provider: "google" });
-        void signIn("google", { callbackUrl: "/developers" });
+        void signIn("google", { callbackUrl });
       }}
     >
-      Sign in with Google
+      {signInLabel}
     </Button>
   );
 }

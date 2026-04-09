@@ -21,7 +21,7 @@ function getStatusCopy(status: string | undefined, message: string | undefined) 
     return {
       title: "Instagram connected",
       description:
-        "The browser handoff completed successfully. Return to Claude and rerun the setup or sync skill.",
+        "The browser handoff completed successfully. Return to Claude Desktop and rerun the setup or sync skill.",
     };
   }
 
@@ -37,7 +37,7 @@ function getStatusCopy(status: string | undefined, message: string | undefined) 
     return {
       title: "Link verification failed",
       description:
-        "The Instagram OAuth state could not be verified. Start the connect flow again from Claude or the developers page.",
+        "The Instagram OAuth state could not be verified. Start the connect flow again from Claude, then retry the browser handoff.",
     };
   }
 
@@ -45,7 +45,7 @@ function getStatusCopy(status: string | undefined, message: string | undefined) 
     return {
       title: "Sign-in required",
       description:
-        "Sign in with Google on the hosted app first, then retry the Instagram connect flow.",
+        "Sign in with Google on the Instagram Insights handoff page first, then retry the connect flow from Claude.",
     };
   }
 
@@ -71,7 +71,7 @@ export default async function AuthCompletePage({
           </CardHeader>
           <CardContent className="flex flex-wrap gap-3">
             <Button asChild>
-              <Link href="/developers">Open developers page</Link>
+              <Link href="/developers">Open support page</Link>
             </Button>
             <Button asChild variant="outline">
               <Link href="/api/login">Retry Instagram connect</Link>

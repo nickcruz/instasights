@@ -23,9 +23,11 @@ The plugin bundles the hosted MCP server at `/mcp`.
 Claude will:
 
 1. Load the plugin bundle
-2. Authenticate the remote MCP server with the hosted OAuth flow
-3. Store the OAuth credentials locally
-4. Expose Claude-visible skills for setup, Instagram linking, sync, and analysis
+2. Start the hosted MCP OAuth consent flow
+3. Redirect to the app root so the user can sign in to Instagram Insights with Google
+4. Resume the original OAuth request back into Claude
+5. Store the OAuth credentials locally
+6. Expose Claude-visible skills for setup, Instagram linking, sync, and analysis
 
 The plugin does not manage its own token files or local secret storage.
 
@@ -61,7 +63,7 @@ Then reload plugins and run:
 
 ### I need to re-authenticate Google
 
-Claude owns the MCP OAuth session. Re-authenticate the hosted MCP server rather than creating a manual Google-auth skill.
+Claude owns the MCP OAuth session, but Instagram Insights still uses a first-party Google login on the app root. Re-run the connector auth flow rather than creating a manual Google-auth skill.
 
 ### I still need to link Instagram
 
@@ -72,6 +74,7 @@ Use:
 ```
 
 That skill will open the hosted `/api/login` handoff and then have Claude re-check setup status.
+That Instagram browser handoff reuses the same app session created when Claude sent you through the root sign-in page.
 
 ### I want to refresh my data
 
@@ -92,3 +95,4 @@ https://YOUR_APP_DOMAIN/developers
 ```
 
 That page includes install guidance, status hints, and legacy API key access for compatibility workflows.
+The root page (`https://YOUR_APP_DOMAIN/`) is reserved for Claude's connector-auth handoff.
