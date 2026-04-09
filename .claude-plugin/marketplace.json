@@ -11,7 +11,7 @@
   "plugins": [
     {
       "name": "instagram-insights",
-      "source": "./",
+      "source": "./plugins/instagram-insights",
       "description": "Connect Instagram, trigger syncs, and analyze creator performance through the hosted MCP backend.",
       "version": "1.0.0",
       "author": {
@@ -20,9 +20,19 @@
       "homepage": "https://github.com/nickcruz/instagram-insights",
       "repository": "https://github.com/nickcruz/instagram-insights",
       "license": "MIT",
-      "keywords": ["instagram", "analytics", "mcp", "claude-code"],
+      "keywords": [
+        "instagram",
+        "analytics",
+        "mcp",
+        "claude-code"
+      ],
       "category": "productivity",
-      "tags": ["instagram", "creator", "analytics", "plugin"]
+      "tags": [
+        "instagram",
+        "creator",
+        "analytics",
+        "plugin"
+      ]
     }
   ]
 }
