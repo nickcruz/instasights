@@ -22,8 +22,8 @@ The product UI is intentionally minimal. `/developers` is the supported human-fa
 The primary install flow is now Claude plugin installation:
 
 ```text
-/plugin marketplace add https://github.com/nickcruz/creator-insights.git
-/plugin install instagram-insights@creator-insights-plugins
+/plugin marketplace add https://github.com/nickcruz/instagram-insights.git
+/plugin install instagram-insights@instagram-insights-plugins
 ```
 
 Inside the plugin bundle:

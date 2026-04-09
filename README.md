@@ -25,8 +25,8 @@ Instagram Insights is a Claude-first Instagram analytics workflow built around a
 The primary user experience is the Claude plugin marketplace flow:
 
 ```text
-/plugin marketplace add https://github.com/nickcruz/creator-insights.git
-/plugin install instagram-insights@creator-insights-plugins
+/plugin marketplace add https://github.com/nickcruz/instagram-insights.git
+/plugin install instagram-insights@instagram-insights-plugins
 ```
 
 After install, run:

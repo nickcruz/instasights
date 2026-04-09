@@ -7,13 +7,13 @@ This is the primary install path for Instagram Insights.
 Add the repository as a Claude plugin marketplace:
 
 ```text
-/plugin marketplace add https://github.com/nickcruz/creator-insights.git
+/plugin marketplace add https://github.com/nickcruz/instagram-insights.git
 ```
 
 Install the plugin:
 
 ```text
-/plugin install instagram-insights@creator-insights-plugins
+/plugin install instagram-insights@instagram-insights-plugins
 ```
 
 ## What happens during install

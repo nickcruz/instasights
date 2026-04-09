@@ -9,8 +9,8 @@ The primary user experience is the Claude plugin, not a custom dashboard or manu
 Install from the repository marketplace:
 
 ```text
-/plugin marketplace add https://github.com/nickcruz/creator-insights.git
-/plugin install instagram-insights@creator-insights-plugins
+/plugin marketplace add https://github.com/nickcruz/instagram-insights.git
+/plugin install instagram-insights@instagram-insights-plugins
 ```
 
 The plugin bundles one remote HTTP MCP server that points at:
