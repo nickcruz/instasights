@@ -3,11 +3,6 @@
   "owner": {
     "name": "Nick Reyes"
   },
-  "metadata": {
-    "description": "Claude plugins for Instagram insights, sync orchestration, and analysis.",
-    "version": "1.0.0",
-    "pluginRoot": "./plugins"
-  },
   "plugins": [
     {
       "name": "instagram-insights",
