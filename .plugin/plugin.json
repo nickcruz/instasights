@@ -1,0 +1,14 @@
+{
+  "name": "instagram-insights",
+  "description": "Connect your Instagram account, sync performance data, and analyze content metrics — all through Claude.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Nick Reyes"
+  },
+  "homepage": "https://github.com/nickcruz/instagram-insights",
+  "repository": "https://github.com/nickcruz/instagram-insights",
+  "license": "MIT",
+  "keywords": ["instagram", "analytics", "creator", "social-media", "mcp"],
+  "skills": "./skills/",
+  "category": "data-analysis"
+}
