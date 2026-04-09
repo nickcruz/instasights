@@ -35,7 +35,6 @@ export function OAuthContinueClient({
     }
 
     hasStartedRef.current = true;
-    setHasFailed(false);
 
     void signIn("google", {
       callbackUrl,
