@@ -14,7 +14,7 @@ function PostHogIdentify() {
         name: session.user.name ?? undefined,
       });
     }
-  }, [session?.user?.id]);
+  }, [session?.user?.email, session?.user?.id, session?.user?.name]);
 
   return null;
 }

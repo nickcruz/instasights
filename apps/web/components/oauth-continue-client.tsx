@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 
@@ -13,7 +13,9 @@ type OAuthContinueClientProps = {
 export function OAuthContinueClient({
   initialReturnTo,
 }: OAuthContinueClientProps) {
-  const [status, setStatus] = useState<"ready" | "starting" | "failed">("ready");
+  const [attemptNonce, setAttemptNonce] = useState(0);
+  const [hasFailed, setHasFailed] = useState(false);
+  const hasStartedRef = useRef(false);
 
   const callbackUrl = useMemo(() => {
     if (!initialReturnTo) {
@@ -28,19 +30,20 @@ export function OAuthContinueClient({
   }, [initialReturnTo]);
 
   useEffect(() => {
-    if (status !== "ready") {
+    if (hasStartedRef.current) {
       return;
     }
 
-    setStatus("starting");
+    hasStartedRef.current = true;
+    setHasFailed(false);
 
     void signIn("google", {
       callbackUrl,
       redirect: true,
     }).catch(() => {
-      setStatus("failed");
+      setHasFailed(true);
     });
-  }, [callbackUrl, status]);
+  }, [attemptNonce, callbackUrl]);
 
   return (
     <div className="space-y-6">
@@ -56,7 +59,7 @@ export function OAuthContinueClient({
         </p>
       </div>
 
-      {status === "failed" ? (
+      {hasFailed ? (
         <div className="space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--secondary)] p-5">
           <p className="text-sm text-[var(--foreground)]">
             We could not automatically continue the Google sign-in flow.
@@ -64,7 +67,9 @@ export function OAuthContinueClient({
           <div className="flex flex-wrap gap-3">
             <Button
               onClick={() => {
-                setStatus("ready");
+                hasStartedRef.current = false;
+                setHasFailed(false);
+                setAttemptNonce((current) => current + 1);
               }}
             >
               Try again
@@ -76,9 +81,7 @@ export function OAuthContinueClient({
         </div>
       ) : (
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--secondary)] p-5 text-sm text-[var(--muted-foreground)]">
-          {status === "starting"
-            ? "Opening Google sign-in now. When it succeeds, Claude should resume the MCP connection automatically."
-            : "Preparing Google sign-in…"}
+          Opening Google sign-in now. When it succeeds, Claude should resume the MCP connection automatically.
         </div>
       )}
     </div>
