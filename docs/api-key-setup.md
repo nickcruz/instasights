@@ -81,6 +81,6 @@ The sync run belongs to another user or the ID is incorrect.
 Prefer the Claude marketplace install whenever possible:
 
 ```text
-/plugin marketplace add https://github.com/nickcruz/instagram-insights.git
-/plugin install instagram-insights@instagram-insights-plugins
+/plugin marketplace add https://github.com/kingscrosslabs/marketplace.git
+/plugin install instagram-insights@kingscrosslabs-marketplace
 ```

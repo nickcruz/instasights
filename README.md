@@ -18,15 +18,15 @@ Instagram Insights is a Claude-first Instagram analytics workflow built around a
 - A hosted web app in `apps/web` that exposes `/mcp`, OAuth routes, `/api/v1/*`, Instagram auth handoffs, and the minimal install/troubleshooting UI.
 - Shared packages in `packages/*` for MCP behavior, contracts, database access, and infrastructure definitions.
 - A transcriber service in `services/transcriber` used by the sync pipeline.
-- A Claude plugin bundle in `plugins/instagram-insights` plus a repository marketplace in `.claude-plugin/marketplace.json`.
+- A Claude plugin bundle in `plugins/instagram-insights`, with the public marketplace catalog published from `kingscrosslabs/marketplace`.
 
 ## Claude Install
 
 The primary user experience is the Claude plugin marketplace flow:
 
 ```text
-/plugin marketplace add https://github.com/nickcruz/instagram-insights.git
-/plugin install instagram-insights@instagram-insights-plugins
+/plugin marketplace add https://github.com/kingscrosslabs/marketplace.git
+/plugin install instagram-insights@kingscrosslabs-marketplace
 ```
 
 After install, run:

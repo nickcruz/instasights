@@ -22,14 +22,16 @@ The product UI is intentionally minimal. `/developers` is the supported human-fa
 The primary install flow is now Claude plugin installation:
 
 ```text
-/plugin marketplace add https://github.com/nickcruz/instagram-insights.git
-/plugin install instagram-insights@instagram-insights-plugins
+/plugin marketplace add https://github.com/kingscrosslabs/marketplace.git
+/plugin install instagram-insights@kingscrosslabs-marketplace
 ```
 
-Inside the plugin bundle:
+The public marketplace catalog now lives in the Kings Cross Labs marketplace repo and points back to the plugin bundle in this repository:
 
+- `https://github.com/kingscrosslabs/marketplace.git`
+- `https://github.com/nickcruz/instagram-insights.git`
 - `.claude-plugin/marketplace.json` defines the repository marketplace
-- `plugins/instagram-insights/.plugin/plugin.json` defines the Claude plugin
+- `plugins/instagram-insights/.claude-plugin/plugin.json` defines the Claude plugin
 - `plugins/instagram-insights/.mcp.json` bundles the hosted remote MCP server
 - `plugins/instagram-insights/skills/*` provides Claude-visible setup, connect, sync, and analysis skills
 

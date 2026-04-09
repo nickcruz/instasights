@@ -47,8 +47,8 @@ export default async function DevelopersPage({
       : [];
 
   const pluginMarketplace =
-    "/plugin marketplace add https://github.com/nickcruz/instagram-insights.git";
-  const pluginInstall = "/plugin install instagram-insights@instagram-insights-plugins";
+    "/plugin marketplace add https://github.com/kingscrosslabs/marketplace.git";
+  const pluginInstall = "/plugin install instagram-insights@kingscrosslabs-marketplace";
   const localPlugin = "claude --plugin-dir ./plugins/instagram-insights";
   const pluginAppUrlEnv = `export INSTAGRAM_INSIGHTS_APP_URL="${appUrl}"`;
   const oauthFallback = `claude mcp add --transport http instagram-insights ${appUrl}/mcp`;
@@ -216,7 +216,7 @@ export default async function DevelopersPage({
           <CardContent className="grid gap-3 md:grid-cols-2">
             {[
               "1. Add the GitHub repo as a Claude marketplace.",
-              "2. Install instagram-insights@instagram-insights-plugins.",
+              "2. Install instagram-insights@kingscrosslabs-marketplace.",
               "3. Let Claude authenticate the hosted MCP through browser OAuth.",
               "4. Run /instagram-insights:setup.",
               "5. If prompted, open the Instagram link handoff and finish the Meta OAuth flow.",
