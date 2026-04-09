@@ -29,7 +29,7 @@ The primary install flow is now Claude plugin installation:
 Inside the plugin bundle:
 
 - `.claude-plugin/marketplace.json` defines the repository marketplace
-- `plugins/instagram-insights/.claude-plugin/plugin.json` defines the Claude plugin
+- `plugins/instagram-insights/.plugin/plugin.json` defines the Claude plugin
 - `plugins/instagram-insights/.mcp.json` bundles the hosted remote MCP server
 - `plugins/instagram-insights/skills/*` provides Claude-visible setup, connect, sync, and analysis skills
 
@@ -129,12 +129,13 @@ The hosted deployment is ready when all of these are true:
 
 ## Local plugin development
 
-Until the production canonical origin is finalized, the bundled `.mcp.json` uses `INSTAGRAM_INSIGHTS_APP_URL`.
+The bundled `.mcp.json` points directly at the production hosted MCP server:
+
+- `https://project-qah0p.vercel.app/mcp`
 
 For local plugin development:
 
 ```bash
-export INSTAGRAM_INSIGHTS_APP_URL="https://YOUR_APP_DOMAIN"
 claude --plugin-dir ./plugins/instagram-insights
 ```
 

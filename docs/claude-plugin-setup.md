@@ -45,10 +45,9 @@ That skill should:
 
 ## Local plugin development
 
-If you are testing the plugin bundle directly from the repo, set the hosted app origin first:
+If you are testing the plugin bundle directly from the repo:
 
 ```bash
-export INSTAGRAM_INSIGHTS_APP_URL="https://YOUR_APP_DOMAIN"
 claude --plugin-dir ./plugins/instagram-insights
 ```
 

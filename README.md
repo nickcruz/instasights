@@ -72,7 +72,6 @@ yarn build
 For local Claude plugin development:
 
 ```bash
-export INSTAGRAM_INSIGHTS_APP_URL="https://YOUR_APP_DOMAIN"
 claude --plugin-dir ./plugins/instagram-insights
 ```
 

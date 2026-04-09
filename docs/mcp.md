@@ -16,18 +16,12 @@ Install from the repository marketplace:
 The plugin bundles one remote HTTP MCP server that points at:
 
 ```text
-https://YOUR_APP_DOMAIN/mcp
+https://project-qah0p.vercel.app/mcp
 ```
 
 During install, Claude authenticates that MCP server with the hosted OAuth flow. Google sign-in happens there; the plugin does not store its own tokens.
 
-For local development before the production app URL is finalized, set:
-
-```bash
-export INSTAGRAM_INSIGHTS_APP_URL="https://YOUR_APP_DOMAIN"
-```
-
-Then load the local plugin bundle:
+For local plugin development, load the local plugin bundle:
 
 ```bash
 claude --plugin-dir ./plugins/instagram-insights

@@ -54,7 +54,7 @@ curl -X POST \
 If a client cannot use the hosted OAuth flow, it can still call the MCP with a bearer header:
 
 ```bash
-claude mcp add --transport http instagram-insights https://YOUR_APP_DOMAIN/mcp \
+claude mcp add --transport http instagram-insights https://project-qah0p.vercel.app/mcp \
   --header "Authorization: Bearer $INSTAGRAM_INSIGHTS_API_KEY"
 ```
 
