@@ -1,0 +1,28 @@
+{
+  "name": "instagram-insights-plugins",
+  "owner": {
+    "name": "Nick Reyes"
+  },
+  "metadata": {
+    "description": "Claude plugins for Instagram insights, sync orchestration, and analysis.",
+    "version": "1.0.0",
+    "pluginRoot": "./plugins"
+  },
+  "plugins": [
+    {
+      "name": "instagram-insights",
+      "source": "./plugins/instagram-insights",
+      "description": "Connect Instagram, trigger syncs, and analyze creator performance through the hosted MCP backend.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Nick Reyes"
+      },
+      "homepage": "https://github.com/nickcruz/instagram-insights",
+      "repository": "https://github.com/nickcruz/instagram-insights",
+      "license": "MIT",
+      "keywords": ["instagram", "analytics", "mcp", "claude-code"],
+      "category": "productivity",
+      "tags": ["instagram", "creator", "analytics", "plugin"]
+    }
+  ]
+}
