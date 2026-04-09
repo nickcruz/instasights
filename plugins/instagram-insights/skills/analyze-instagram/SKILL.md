@@ -1,4 +1,5 @@
 ---
+name: analyze
 description: Analyze Instagram account and media performance through the hosted MCP tools, using sync freshness before making recommendations.
 disable-model-invocation: true
 ---

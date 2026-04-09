@@ -1,11 +1,19 @@
 {
   "name": "instagram-insights",
-  "description": "Claude-first Instagram setup, sync orchestration, and analytics over the hosted MCP backend.",
+  "description": "Connect your Instagram account, sync performance data, and analyze content metrics — all through Claude.",
   "version": "1.0.0",
   "author": {
     "name": "Nick Reyes"
   },
   "homepage": "https://github.com/nickcruz/instagram-insights",
   "repository": "https://github.com/nickcruz/instagram-insights",
-  "license": "MIT"
+  "license": "MIT",
+  "keywords": [
+    "instagram",
+    "analytics",
+    "creator",
+    "social-media",
+    "mcp"
+  ],
+  "category": "data-analysis"
 }

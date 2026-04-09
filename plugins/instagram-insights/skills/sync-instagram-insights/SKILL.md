@@ -1,4 +1,5 @@
 ---
+name: sync
 description: Trigger a hosted Instagram sync through MCP, reuse recent or active runs when possible, and report the final run status.
 disable-model-invocation: true
 ---

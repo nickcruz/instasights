@@ -37,11 +37,11 @@ After install, start with:
 /instagram-insights:setup
 ```
 
-That skill should:
+That skill will:
 
-- check whether you have linked Instagram
-- look at your latest sync status
-- tell you whether to connect Instagram, sync, wait, or analyze
+- Check whether you have linked Instagram
+- Look at your latest sync status
+- Tell you whether to connect, sync, wait, or analyze
 
 ## Local plugin development
 
@@ -68,10 +68,10 @@ Claude owns the MCP OAuth session. Re-authenticate the hosted MCP server rather 
 Use:
 
 ```text
-/instagram-insights:connect-instagram
+/instagram-insights:connect
 ```
 
-That skill should open the hosted `/api/login` handoff and then have Claude re-check setup status.
+That skill will open the hosted `/api/login` handoff and then have Claude re-check setup status.
 
 ### I want to refresh my data
 

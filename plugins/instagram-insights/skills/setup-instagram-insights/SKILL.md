@@ -1,4 +1,5 @@
 ---
+name: setup
 description: Check setup state, connect Instagram if needed, trigger syncs when stale, and hand off to analysis when the account is ready.
 disable-model-invocation: true
 ---

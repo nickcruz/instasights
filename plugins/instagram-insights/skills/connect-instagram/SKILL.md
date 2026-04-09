@@ -1,4 +1,5 @@
 ---
+name: connect
 description: Launch the hosted Instagram linking handoff and help the user reconnect their Instagram account.
 disable-model-invocation: true
 ---

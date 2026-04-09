@@ -4,15 +4,13 @@
     "name": "Nick Reyes"
   },
   "metadata": {
-    "description": "Claude plugins for Instagram insights, sync orchestration, and analysis.",
-    "version": "1.0.0",
-    "pluginRoot": "./plugins"
+    "description": "Claude plugins for Instagram insights, sync orchestration, and analysis."
   },
   "plugins": [
     {
       "name": "instagram-insights",
       "source": "./plugins/instagram-insights",
-      "description": "Connect Instagram, trigger syncs, and analyze creator performance through the hosted MCP backend.",
+      "description": "Connect your Instagram account, sync performance data, and analyze content metrics — all through Claude.",
       "version": "1.0.0",
       "author": {
         "name": "Nick Reyes"
@@ -23,16 +21,11 @@
       "keywords": [
         "instagram",
         "analytics",
-        "mcp",
-        "claude-code"
-      ],
-      "category": "productivity",
-      "tags": [
-        "instagram",
         "creator",
-        "analytics",
-        "plugin"
-      ]
+        "social-media",
+        "mcp"
+      ],
+      "category": "data-analysis"
     }
   ]
 }
