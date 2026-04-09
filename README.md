@@ -1,24 +1,14 @@
 # Creator Insights
 
 <p align="center">
-  <a href="#claude-install">
-    <img alt="Claude Plugin" src="https://img.shields.io/badge/Claude-Plugin-D97757?logo=anthropic&logoColor=white&style=for-the-badge"/>
-  </a>
-  <a href="#hosted-architecture">
-    <img alt="Hosted MCP" src="https://img.shields.io/badge/MCP-Hosted%20Server-111827?style=for-the-badge"/>
-  </a>
+  <a href="#claude-install"><img alt="Claude Plugin" src="https://img.shields.io/badge/Claude-Plugin-D97757?logo=anthropic&logoColor=white&style=for-the-badge"/></a>
+  <a href="#hosted-architecture"><img alt="Hosted MCP" src="https://img.shields.io/badge/MCP-Hosted%20Server-111827?style=for-the-badge"/></a>
+  <a href="./LICENSE"><img alt="License MIT" src="https://img.shields.io/badge/License-MIT-16A34A?style=for-the-badge"/></a>
 </p>
 
 <p align="center">
-  <a href="./apps/web">
-    <img alt="Next.js 16" src="https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white&style=for-the-badge"/>
-  </a>
-  <a href="./services/transcriber">
-    <img alt="FastAPI Whisper" src="https://img.shields.io/badge/FastAPI-Whisper-009688?logo=fastapi&logoColor=white&style=for-the-badge"/>
-  </a>
-  <a href="./LICENSE">
-    <img alt="License MIT" src="https://img.shields.io/badge/License-MIT-16A34A?style=for-the-badge"/>
-  </a>
+  <a href="./apps/web"><img alt="Next.js 16" src="https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white&style=for-the-badge"/></a>
+  <a href="./services/transcriber"><img alt="FastAPI Whisper" src="https://img.shields.io/badge/FastAPI-Whisper-009688?logo=fastapi&logoColor=white&style=for-the-badge"/></a>
 </p>
 
 Creator Insights is a Claude-first Instagram analytics workflow built around a hosted MCP server, a thin Next.js backend, and durable sync/transcription services.
