@@ -5,6 +5,8 @@ description: Use the bundled macOS Instagram Insights CLI to authenticate with G
 
 Use this skill whenever the user wants to work with Instagram Insights data.
 
+For a deeper command-by-command reference, see [CLI.md](/Users/nickcruz/repos/instagram-insights/skills/instagram-insights/CLI.md).
+
 Core rules:
 
 - Use the bundled CLI, not raw HTTP requests and not MCP tools.
