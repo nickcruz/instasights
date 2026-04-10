@@ -47,7 +47,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ env.AWS_REGION }}
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-to-assume: ${{ secrets.INSTAGRAM_INSIGHTS_CLI_AWS_ROLE_ARN }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
