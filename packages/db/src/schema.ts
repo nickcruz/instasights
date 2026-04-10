@@ -310,6 +310,7 @@ export const instagramAccountSnapshots = pgTable("instagram_account_snapshot", {
   accountInsights: jsonb("accountInsights").notNull(),
   analysisFacts: jsonb("analysisFacts").notNull(),
   highlights: jsonb("highlights").notNull(),
+  analysisReports: jsonb("analysisReports"),
   warnings: jsonb("warnings").notNull(),
   fetchManifest: jsonb("fetchManifest").notNull(),
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
@@ -352,6 +353,7 @@ export const instagramMediaItems = pgTable(
     transcriptError: text("transcriptError"),
     transcriptMetadata: jsonb("transcriptMetadata"),
     transcriptUpdatedAt: timestamp("transcriptUpdatedAt", { mode: "date" }),
+    analysis: jsonb("analysis"),
     topComments: jsonb("topComments"),
     insights: jsonb("insights"),
     warnings: jsonb("warnings"),
@@ -369,6 +371,9 @@ export const instagramMediaItems = pgTable(
     userIdIdx: index("instagram_media_item_user_id_idx").on(table.userId),
     accountIdIdx: index("instagram_media_item_account_id_idx").on(
       table.instagramAccountId,
+    ),
+    lastSyncRunIdIdx: index("instagram_media_item_last_sync_run_id_idx").on(
+      table.lastSyncRunId,
     ),
   }),
 );

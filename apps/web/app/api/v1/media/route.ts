@@ -21,6 +21,7 @@ export async function GET(request: Request) {
   const cursor = url.searchParams.get("cursor");
   const since = url.searchParams.get("since");
   const until = url.searchParams.get("until");
+  const flatMetrics = url.searchParams.get("flatMetrics");
 
   return createJsonResponse(
     await listInstagramMediaByUserId({
@@ -30,6 +31,7 @@ export async function GET(request: Request) {
       cursor,
       since,
       until,
+      includeFlatMetrics: flatMetrics === "true",
     }),
   );
 }

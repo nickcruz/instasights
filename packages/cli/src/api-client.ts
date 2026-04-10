@@ -11,6 +11,7 @@ import type {
   LatestSnapshotResponse,
   MediaDetailResponse,
   MediaListResponse,
+  ReportResponse,
   StoredAuthState,
   SyncRunDetailResponse,
   SyncRunListResponse,
@@ -151,6 +152,12 @@ export class InstagramInsightsApiClient {
 
   getMedia(mediaId: string) {
     return this.requestJson<MediaDetailResponse>(`/api/v1/media/${encodeURIComponent(mediaId)}`);
+  }
+
+  getReport(days = 30) {
+    return this.requestJson<ReportResponse>(
+      `/api/v1/report?${new URLSearchParams({ days: String(days) }).toString()}`,
+    );
   }
 
   listSyncRuns(searchParams: URLSearchParams) {

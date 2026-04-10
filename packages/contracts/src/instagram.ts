@@ -79,6 +79,7 @@ export type LatestSnapshot = {
   highlights: Record<string, unknown>;
   warnings: unknown[];
   fetchManifest: Record<string, unknown>;
+  analysisReports: Record<string, PrecomputedAnalysisReport>;
 };
 
 export type LatestSnapshotResponse = {
@@ -113,6 +114,18 @@ export type InstagramMediaListItem = {
   transcriptError: string | null;
   transcriptMetadata: Record<string, unknown> | null;
   transcriptUpdatedAt: string | null;
+  transcript?: string | null;
+  hook?: string | null;
+  theme?: string | null;
+  hashtags?: string[];
+  views?: number | null;
+  reach?: number | null;
+  likes?: number | null;
+  saves?: number | null;
+  shares?: number | null;
+  comments?: number | null;
+  engagementRate?: number | null;
+  analysisVersion?: string | null;
   syncedAt: string;
   createdAt: string;
   updatedAt: string;
@@ -132,6 +145,87 @@ export type MediaListResponse = CursorPage & {
 
 export type MediaDetailResponse = {
   media: InstagramMediaDetail | null;
+};
+
+export type PrecomputedAnalysisAccountSummary = {
+  username: string | null;
+  followers: number | null;
+  following: number | null;
+  bio: string | null;
+  website: string | null;
+  profilePictureUrl: string | null;
+};
+
+export type PrecomputedAnalysisPost = {
+  id: string;
+  postedAt: string | null;
+  type: string | null;
+  caption: string | null;
+  transcript: string | null;
+  hook: string | null;
+  theme: string | null;
+  hashtags: string[];
+  views: number | null;
+  reach: number | null;
+  likes: number | null;
+  saves: number | null;
+  shares: number | null;
+  comments: number | null;
+  engagementRate: number | null;
+  permalink: string | null;
+  thumbnailUrl: string | null;
+  analysisVersion: string;
+};
+
+export type PrecomputedThemeAverage = {
+  theme: string;
+  postCount: number;
+  avgViews: number | null;
+  avgReach: number | null;
+  avgLikes: number | null;
+  avgSaves: number | null;
+  avgShares: number | null;
+  avgComments: number | null;
+  avgEngagementRate: number | null;
+};
+
+export type PrecomputedHashtagCount = {
+  hashtag: string;
+  count: number;
+};
+
+export type PrecomputedAnalysisReport = {
+  generatedAt: string;
+  analysisVersion: string;
+  window: {
+    since: string;
+    until: string;
+    days: number;
+  };
+  accountSummary: PrecomputedAnalysisAccountSummary;
+  posts: PrecomputedAnalysisPost[];
+  aggregates: {
+    totals: {
+      postCount: number;
+      views: number;
+      reach: number;
+      likes: number;
+      saves: number;
+      shares: number;
+      comments: number;
+      avgEngagementRate: number | null;
+    };
+    themeAverages: PrecomputedThemeAverage[];
+    topPostsByMetric: Record<string, PrecomputedAnalysisPost[]>;
+    hashtags: PrecomputedHashtagCount[];
+  };
+};
+
+export type ReportResponse = {
+  status: ApiReadStatus;
+  account: LinkedInstagramAccountSummary | null;
+  latestSyncRun: InstagramSyncRunSummary | null;
+  report: PrecomputedAnalysisReport | null;
 };
 
 export type SyncRunListResponse = CursorPage & {

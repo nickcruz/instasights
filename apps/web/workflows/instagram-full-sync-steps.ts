@@ -1,12 +1,15 @@
 import { FatalError } from "workflow";
 import {
   getInstagramAccountById,
+  listInstagramMediaBySyncRunId,
   listInstagramMediaItemsForTranscription,
   markInstagramMediaItemTranscriptionStarted,
   markInstagramSyncRunCompleted,
   markInstagramSyncRunFailed,
+  persistInstagramMediaAnalysis,
   persistInstagramMediaItemTranscriptionFailure,
   persistInstagramMediaItemTranscriptionSuccess,
+  persistInstagramSnapshotAnalysisReport,
   persistInstagramSyncResult,
   updateInstagramSyncRunProgress,
 } from "@instagram-insights/db";
@@ -30,6 +33,11 @@ import {
   type Manifest,
   type MediaBundle,
 } from "@/lib/instagram-sync";
+import {
+  buildPrecomputedAnalysisReport,
+  buildPrecomputedMediaAnalysis,
+  PRECOMPUTED_REPORT_KEY,
+} from "@/lib/precomputed-analysis";
 import {
   buildTranscriptMetadata,
   isInstagramMediaEligibleForTranscription,
@@ -509,6 +517,53 @@ async function persistTranscriptFailure(input: {
       model: input.response?.model ?? null,
     }),
   });
+}
+
+export async function finalizeAnalysisArtifactsStep(input: {
+  syncRunId: string;
+  userId: string;
+  accountPayload: GraphResponse;
+}) {
+  "use step";
+
+  const mediaRows = await listInstagramMediaBySyncRunId({
+    syncRunId: input.syncRunId,
+    userId: input.userId,
+  });
+
+  const analyses = mediaRows.map((row) => buildPrecomputedMediaAnalysis(row));
+
+  for (const analysis of analyses) {
+    const persisted = await persistInstagramMediaAnalysis({
+      syncRunId: input.syncRunId,
+      mediaId: analysis.id,
+      analysis,
+    });
+
+    if (!persisted) {
+      throw new FatalError(`Failed to persist analysis for media ${analysis.id}.`);
+    }
+  }
+
+  const report = buildPrecomputedAnalysisReport({
+    account: input.accountPayload,
+    mediaRows,
+  });
+
+  const snapshot = await persistInstagramSnapshotAnalysisReport({
+    syncRunId: input.syncRunId,
+    reportKey: PRECOMPUTED_REPORT_KEY,
+    report,
+  });
+
+  if (!snapshot) {
+    throw new FatalError("Failed to persist the precomputed analysis report.");
+  }
+
+  return {
+    analyzedMediaCount: analyses.length,
+    reportKey: PRECOMPUTED_REPORT_KEY,
+  };
 }
 
 export async function completeRunStep(input: {
