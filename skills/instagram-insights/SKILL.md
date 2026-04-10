@@ -53,7 +53,9 @@ Recommended workflow:
 3. Run `./instagram-insights setup status`.
 4. If setup reports `not_linked`, run `./instagram-insights instagram link --open`.
 5. If setup reports `not_synced` or `stale`, run `./instagram-insights sync run --wait`.
-6. Use `./instagram-insights media analyze --days 30` for the precomputed 30-day report, plus `account overview`, `snapshot latest`, `media list`, `media get`, `sync list`, and `sync get` for debugging.
+6. Use `./instagram-insights media analyze --days 30` for the precomputed 30-day JSON report.
+7. Use `./instagram-insights report generate --days 30` when you want a self-contained HTML dashboard export.
+8. Use `account overview`, `snapshot latest`, `media list`, `media get`, `sync list`, and `sync get` for debugging.
 
 Supported commands:
 
@@ -67,6 +69,7 @@ Supported commands:
 - `./instagram-insights media list --limit 10 --days 30 --flat-metrics`
 - `./instagram-insights media get <mediaId>`
 - `./instagram-insights media analyze --days 30`
+- `./instagram-insights report generate --days 30`
 - `./instagram-insights sync list --limit 10`
 - `./instagram-insights sync get <syncRunId>`
 - `./instagram-insights sync run --wait`
@@ -77,6 +80,7 @@ Notes:
 - `auth login` opens the hosted OAuth flow and completes Google sign-in through the web app before returning to the CLI loopback callback.
 - `clean-reset` keeps the CLI authenticated, but deletes the linked Instagram account plus synced backend media/sync state so setup returns to `not_linked`.
 - `setup status --open-link` can open the Instagram handoff automatically when the account is not linked.
+- `report generate --days 30` writes a static HTML dashboard using stored report data and deterministic CLI-side heuristics. It does not require any extra model API call.
 - `--app-url` can override the default production URL for local or staging testing.
 - `INSTAGRAM_INSIGHTS_DISABLE_AUTO_UPDATE=1` disables the startup update check when you need to troubleshoot a bad rollout.
 - `INSTAGRAM_INSIGHTS_UPDATE_MANIFEST_URL` can override the hosted manifest URL when you need to test a staging build.

@@ -37,6 +37,7 @@ The supported CLI target is macOS on Apple Silicon. After install, run the skill
 ./skills/instagram-insights/instagram-insights setup status
 ./skills/instagram-insights/instagram-insights sync run --wait
 ./skills/instagram-insights/instagram-insights media analyze --days 30
+./skills/instagram-insights/instagram-insights report generate --days 30
 ```
 
 ## Supported CLI Commands
@@ -50,6 +51,7 @@ The supported CLI target is macOS on Apple Silicon. After install, run the skill
 - `media list [--days <n>] [--flat-metrics]`
 - `media get <mediaId>`
 - `media analyze [--days 30]`
+- `report generate [--days 30] [--output <path>]`
 - `sync list`
 - `sync get <syncRunId>`
 - `sync run [--wait]`
@@ -58,6 +60,8 @@ The supported CLI target is macOS on Apple Silicon. After install, run the skill
 - `update apply [--force]`
 
 All data-returning commands default to JSON output.
+
+`report generate` is the static export path: it writes a self-contained HTML dashboard to disk using existing report and media data, without making any extra model API call.
 
 ## CLI Updates
 
