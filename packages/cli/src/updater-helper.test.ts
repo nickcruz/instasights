@@ -16,9 +16,9 @@ test("applyStagedUpdate copies managed files and preserves auth state", async ()
     await mkdir(path.join(stagingDir, "bin"), { recursive: true });
 
     await writeFile(path.join(skillRoot, ".auth", "state.json"), '{"token":"keep"}\n', "utf8");
-    await writeFile(path.join(stagingDir, "bin", "instagram-insights.mjs"), "new cli\n", "utf8");
+    await writeFile(path.join(stagingDir, "bin", "instagram-insights"), "new cli\n", "utf8");
     await writeFile(
-      path.join(stagingDir, "bin", "instagram-insights-updater.mjs"),
+      path.join(stagingDir, "bin", "instagram-insights-updater"),
       "new helper\n",
       "utf8",
     );
@@ -33,18 +33,18 @@ test("applyStagedUpdate copies managed files and preserves auth state", async ()
       stagingDir,
       version: "1.0.2",
       files: [
-        { path: "bin/instagram-insights.mjs" },
-        { path: "bin/instagram-insights-updater.mjs" },
+        { path: "bin/instagram-insights" },
+        { path: "bin/instagram-insights-updater" },
         { path: "bin/instagram-insights.version.json" },
       ],
     });
 
     assert.equal(
-      await readFile(path.join(skillRoot, "bin", "instagram-insights.mjs"), "utf8"),
+      await readFile(path.join(skillRoot, "bin", "instagram-insights"), "utf8"),
       "new cli\n",
     );
     assert.equal(
-      await readFile(path.join(skillRoot, "bin", "instagram-insights-updater.mjs"), "utf8"),
+      await readFile(path.join(skillRoot, "bin", "instagram-insights-updater"), "utf8"),
       "new helper\n",
     );
     assert.equal(
@@ -75,7 +75,7 @@ test("applyStagedUpdate rejects unmanaged file paths", async () => {
         skillRoot,
         stagingDir,
         version: "1.0.2",
-        files: [{ path: "bin/not-managed.mjs" }],
+        files: [{ path: "bin/not-managed" }],
       }),
       /unmanaged file/i,
     );

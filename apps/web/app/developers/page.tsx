@@ -49,13 +49,11 @@ export default async function DevelopersPage({
   const pluginMarketplace =
     "/plugin marketplace add https://github.com/kingscrosslabs/marketplace.git";
   const pluginInstall = "/plugin install instagram-insights@kingscrosslabs-marketplace";
-  const authLogin = "node ./skills/instagram-insights/bin/instagram-insights.mjs auth login";
-  const setupStatus =
-    "node ./skills/instagram-insights/bin/instagram-insights.mjs setup status";
-  const syncWait =
-    "node ./skills/instagram-insights/bin/instagram-insights.mjs sync run --wait";
+  const authLogin = "./skills/instagram-insights/instagram-insights auth login";
+  const setupStatus = "./skills/instagram-insights/instagram-insights setup status";
+  const syncWait = "./skills/instagram-insights/instagram-insights sync run --wait";
   const linkInstagram =
-    "node ./skills/instagram-insights/bin/instagram-insights.mjs instagram link --open";
+    "./skills/instagram-insights/instagram-insights instagram link --open";
   const apiKeySmokeTest = `curl -H "Authorization: Bearer $INSTAGRAM_INSIGHTS_API_KEY" \\\n  ${appUrl}/api/v1/account`;
 
   return (
@@ -190,7 +188,7 @@ export default async function DevelopersPage({
               </div>
               <CardTitle>Bundled CLI</CardTitle>
               <CardDescription>
-                The supported interface is now the skill-local
+                The supported interface is now the skill-local macOS
                 `instagram-insights` CLI bundled with the installable skill.
               </CardDescription>
             </CardHeader>

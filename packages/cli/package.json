@@ -8,6 +8,7 @@
   },
   "scripts": {
     "build": "node ./build.mjs",
+    "package:macos": "node ./package-macos.mjs",
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "test": "tsx --test \"src/**/*.test.ts\""
   },
@@ -19,6 +20,7 @@
   },
   "devDependencies": {
     "@types/node": "latest",
+    "postject": "^1.0.0-alpha.6",
     "tsx": "^4.21.0",
     "typescript": "latest"
   }

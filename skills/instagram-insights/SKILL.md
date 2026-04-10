@@ -1,6 +1,6 @@
 ---
 name: Instagram Insights
-description: Use the bundled Instagram Insights CLI to authenticate with Google, link Instagram, sync account data, and inspect account, snapshot, media, and sync-run data from the hosted REST API.
+description: Use the bundled macOS Instagram Insights CLI to authenticate with Google, link Instagram, sync account data, and inspect account, snapshot, media, and sync-run data from the hosted REST API.
 ---
 
 Use this skill whenever the user wants to work with Instagram Insights data.
@@ -8,64 +8,65 @@ Use this skill whenever the user wants to work with Instagram Insights data.
 Core rules:
 
 - Use the bundled CLI, not raw HTTP requests and not MCP tools.
+- Target: macOS on Apple Silicon.
 - Resolve paths relative to this skill folder.
-- Start from `./instagram-insights.mjs` so the wrapper can install the latest CLI runtime into `./bin/` before running commands.
+- Start from `./instagram-insights` so the launcher can install the latest signed CLI binaries into `./bin/` before running commands.
 - The CLI stores OAuth tokens in `./.auth/state.json` inside this installed skill folder.
 - Data-returning commands already default to JSON output.
-- The installed skill bootstraps the latest CLI runtime from S3 when `./bin/` is missing, then the downloaded CLI keeps itself updated.
+- The installed skill bootstraps the latest signed CLI binaries when `./bin/` is missing, then the downloaded CLI keeps itself updated.
 
 Preferred shortcut:
 
 ```bash
-./instagram-insights.mjs
+./instagram-insights
 ```
 
 Invoke it from this skill folder. If you are in the repo root, use:
 
 ```bash
-./skills/instagram-insights/instagram-insights.mjs
+./skills/instagram-insights/instagram-insights
 ```
 
 Generated direct bin entrypoint:
 
 ```bash
-node ./bin/instagram-insights.mjs
+./bin/instagram-insights
 ```
 
-That entrypoint appears after the wrapper has installed the runtime or after a local `yarn build:cli`.
+That entrypoint appears after the launcher has installed the runtime or after a local `yarn package:cli:macos`.
 
 Manual update commands:
 
 ```bash
-./instagram-insights.mjs update check
-./instagram-insights.mjs update apply
-./instagram-insights.mjs update check --apply --force
+./instagram-insights update check
+./instagram-insights update apply
+./instagram-insights update check --apply --force
 ```
 
 Recommended workflow:
 
-1. Run `./instagram-insights.mjs auth status`.
-2. If not authenticated, run `./instagram-insights.mjs auth login`.
-3. Run `./instagram-insights.mjs setup status`.
-4. If setup reports `not_linked`, run `./instagram-insights.mjs instagram link --open`.
-5. If setup reports `not_synced` or `stale`, run `./instagram-insights.mjs sync run --wait`.
+1. Run `./instagram-insights auth status`.
+2. If not authenticated, run `./instagram-insights auth login`.
+3. Run `./instagram-insights setup status`.
+4. If setup reports `not_linked`, run `./instagram-insights instagram link --open`.
+5. If setup reports `not_synced` or `stale`, run `./instagram-insights sync run --wait`.
 6. Use `account overview`, `snapshot latest`, `media list`, `media get`, `sync list`, and `sync get` for analysis or debugging.
 
 Supported commands:
 
-- `./instagram-insights.mjs auth login`
-- `./instagram-insights.mjs auth status`
-- `./instagram-insights.mjs auth logout`
-- `./instagram-insights.mjs clean-reset`
-- `./instagram-insights.mjs setup status --stale-after-hours 12`
-- `./instagram-insights.mjs account overview`
-- `./instagram-insights.mjs snapshot latest`
-- `./instagram-insights.mjs media list --limit 10`
-- `./instagram-insights.mjs media get <mediaId>`
-- `./instagram-insights.mjs sync list --limit 10`
-- `./instagram-insights.mjs sync get <syncRunId>`
-- `./instagram-insights.mjs sync run --wait`
-- `./instagram-insights.mjs instagram link --open`
+- `./instagram-insights auth login`
+- `./instagram-insights auth status`
+- `./instagram-insights auth logout`
+- `./instagram-insights clean-reset`
+- `./instagram-insights setup status --stale-after-hours 12`
+- `./instagram-insights account overview`
+- `./instagram-insights snapshot latest`
+- `./instagram-insights media list --limit 10`
+- `./instagram-insights media get <mediaId>`
+- `./instagram-insights sync list --limit 10`
+- `./instagram-insights sync get <syncRunId>`
+- `./instagram-insights sync run --wait`
+- `./instagram-insights instagram link --open`
 
 Notes:
 
@@ -74,4 +75,4 @@ Notes:
 - `setup status --open-link` can open the Instagram handoff automatically when the account is not linked.
 - `--app-url` can override the default production URL for local or staging testing.
 - `INSTAGRAM_INSIGHTS_DISABLE_AUTO_UPDATE=1` disables the startup update check when you need to troubleshoot a bad rollout.
-- If the skill is installed without a generated `./bin/` folder, set `INSTAGRAM_INSIGHTS_UPDATE_MANIFEST_URL` so the wrapper can bootstrap the latest CLI from S3 on first run.
+- `INSTAGRAM_INSIGHTS_UPDATE_MANIFEST_URL` can override the hosted manifest URL when you need to test a staging build.

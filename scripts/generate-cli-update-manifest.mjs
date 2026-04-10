@@ -4,14 +4,17 @@ import { resolve, posix } from "node:path";
 
 const MANAGED_SKILL_FILES = [
   {
-    artifactPath: "index.mjs",
-    remotePath: "bin/instagram-insights.mjs",
+    key: "cli",
+    artifactPath: "instagram-insights",
+    remotePath: "bin/instagram-insights",
   },
   {
-    artifactPath: "instagram-insights-updater.mjs",
-    remotePath: "bin/instagram-insights-updater.mjs",
+    key: "updater",
+    artifactPath: "instagram-insights-updater",
+    remotePath: "bin/instagram-insights-updater",
   },
   {
+    key: "version",
     artifactPath: "instagram-insights.version.json",
     remotePath: "bin/instagram-insights.version.json",
   },
@@ -57,6 +60,17 @@ const files = await Promise.all(
   }),
 );
 
+const artifacts = Object.fromEntries(
+  files.map((file, index) => [
+    MANAGED_SKILL_FILES[index].key,
+    {
+      path: file.path,
+      url: file.url,
+      sha256: file.sha256,
+    },
+  ]),
+);
+
 await writeFile(
   outputPath,
   `${JSON.stringify(
@@ -64,6 +78,7 @@ await writeFile(
       version,
       publishedAt,
       notes,
+      artifacts,
       files,
     },
     null,

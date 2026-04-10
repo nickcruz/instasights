@@ -23,4 +23,8 @@ async function main() {
   runCli();
 }
 
-await main();
+void main().catch((error) => {
+  const message = error instanceof Error ? error.message : "CLI execution failed.";
+  console.error(message);
+  process.exit(1);
+});

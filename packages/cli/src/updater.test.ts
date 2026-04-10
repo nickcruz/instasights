@@ -19,11 +19,41 @@ async function createManifestServer(version: string) {
           version,
           publishedAt: "2026-04-10T12:00:00Z",
           notes: "Test release",
+          artifacts: {
+            cli: {
+              path: "bin/instagram-insights",
+              url: "https://example.com/bin/instagram-insights",
+              sha256:
+                "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            },
+            updater: {
+              path: "bin/instagram-insights-updater",
+              url: "https://example.com/bin/instagram-insights-updater",
+              sha256:
+                "1123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            },
+            version: {
+              path: "bin/instagram-insights.version.json",
+              url: "https://example.com/bin/instagram-insights.version.json",
+              sha256:
+                "2123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            },
+          },
           files: [
             {
-              path: "bin/instagram-insights.mjs",
-              url: "https://example.com/bin/instagram-insights.mjs",
+              path: "bin/instagram-insights",
+              url: "https://example.com/bin/instagram-insights",
               sha256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            },
+            {
+              path: "bin/instagram-insights-updater",
+              url: "https://example.com/bin/instagram-insights-updater",
+              sha256: "1123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            },
+            {
+              path: "bin/instagram-insights.version.json",
+              url: "https://example.com/bin/instagram-insights.version.json",
+              sha256: "2123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
             },
           ],
         }),

@@ -1,6 +1,6 @@
 # Claude Plugin Setup
 
-Instagram Insights now installs as one skill with a bundled CLI.
+Instagram Insights now installs as one skill with a bundled macOS CLI.
 
 ## Install from the repository marketplace
 
@@ -12,7 +12,7 @@ Instagram Insights now installs as one skill with a bundled CLI.
 ## What happens during install
 
 1. Claude installs the Instagram Insights skill bundle.
-2. The skill exposes a stable wrapper at `./instagram-insights.mjs` that installs the latest CLI runtime into `./bin/` before calling `./bin/instagram-insights.mjs`.
+2. The skill exposes a stable launcher at `./instagram-insights` that installs the latest signed CLI binaries into `./bin/` before calling `./bin/instagram-insights`.
 3. The CLI authenticates against the hosted OAuth endpoints under `/oauth/*`.
 4. The hosted app finishes Google sign-in in the browser and resumes the waiting localhost callback.
 5. The installed skill stores auth state in its own `.auth/state.json` file.
@@ -20,20 +20,20 @@ Instagram Insights now installs as one skill with a bundled CLI.
 ## First run
 
 ```bash
-./skills/instagram-insights/instagram-insights.mjs auth login
-./skills/instagram-insights/instagram-insights.mjs setup status
+./skills/instagram-insights/instagram-insights auth login
+./skills/instagram-insights/instagram-insights setup status
 ```
 
 If setup reports `not_linked`, run:
 
 ```bash
-./skills/instagram-insights/instagram-insights.mjs instagram link --open
+./skills/instagram-insights/instagram-insights instagram link --open
 ```
 
 If setup reports `not_synced` or `stale`, run:
 
 ```bash
-./skills/instagram-insights/instagram-insights.mjs sync run --wait
+./skills/instagram-insights/instagram-insights sync run --wait
 ```
 
 ## Troubleshooting
@@ -43,7 +43,7 @@ If setup reports `not_synced` or `stale`, run:
 Run:
 
 ```bash
-./skills/instagram-insights/instagram-insights.mjs auth login
+./skills/instagram-insights/instagram-insights auth login
 ```
 
 ### I still need to link Instagram
@@ -51,7 +51,7 @@ Run:
 Run:
 
 ```bash
-./skills/instagram-insights/instagram-insights.mjs instagram link --open
+./skills/instagram-insights/instagram-insights instagram link --open
 ```
 
 ### I want to inspect the backend directly
@@ -64,4 +64,4 @@ https://YOUR_APP_DOMAIN/developers
 
 That page includes status hints, CLI examples, and the legacy API-key path.
 
-If the installed skill does not already have a generated `./bin/` folder, set `INSTAGRAM_INSIGHTS_UPDATE_MANIFEST_URL` so the wrapper can fetch the latest CLI bundle from S3 on first run.
+The supported binary target is macOS on Apple Silicon. `INSTAGRAM_INSIGHTS_UPDATE_MANIFEST_URL` can override the hosted manifest URL when you need to test a staging build.

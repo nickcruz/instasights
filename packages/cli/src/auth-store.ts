@@ -1,22 +1,50 @@
+import { existsSync } from "node:fs";
 import { chmod, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { DEFAULT_APP_URL } from "./constants";
 import type { StoredAuthState } from "./types";
 
-function resolveBundleDir() {
-  return path.dirname(fileURLToPath(import.meta.url));
+function hasSkillMarker(candidate: string) {
+  return existsSync(path.join(candidate, "SKILL.md"));
+}
+
+function resolveFromExecutable() {
+  const execCandidate = path.resolve(path.dirname(process.execPath), "..");
+  return hasSkillMarker(execCandidate) ? execCandidate : null;
+}
+
+function resolveFromWorkingTree() {
+  let current = path.resolve(process.cwd());
+
+  while (true) {
+    for (const candidate of [current, path.join(current, "skills", "instagram-insights")]) {
+      if (hasSkillMarker(candidate)) {
+        return candidate;
+      }
+    }
+
+    const parent = path.dirname(current);
+    if (parent === current) {
+      return null;
+    }
+
+    current = parent;
+  }
 }
 
 export function resolveSkillRoot() {
-  const explicit = process.env.INSTAGRAM_INSIGHTS_SKILL_ROOT;
+  const explicit = process.env.INSTAGRAM_INSIGHTS_SKILL_ROOT?.trim();
 
   if (explicit) {
     return explicit;
   }
 
-  return path.resolve(resolveBundleDir(), "..");
+  return (
+    resolveFromExecutable() ??
+    resolveFromWorkingTree() ??
+    path.resolve(process.cwd(), "skills", "instagram-insights")
+  );
 }
 
 export function resolveAuthDir() {

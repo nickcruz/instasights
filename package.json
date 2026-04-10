@@ -10,6 +10,7 @@
     "dev": "yarn workspace @instagram-insights/web dev",
     "build": "yarn workspace @instagram-insights/cli build && yarn workspace @instagram-insights/web build",
     "build:cli": "yarn workspace @instagram-insights/cli build",
+    "package:cli:macos": "yarn workspace @instagram-insights/cli package:macos",
     "lint": "yarn workspace @instagram-insights/web lint",
     "typecheck": "yarn workspace @instagram-insights/cli typecheck && yarn workspace @instagram-insights/web typecheck",
     "test": "yarn test:cli && yarn test:web && yarn test:transcriber",

@@ -72,6 +72,6 @@ The sync run belongs to another user or the ID is incorrect.
 Prefer the skill and bundled CLI whenever possible:
 
 ```bash
-node ./skills/instagram-insights/bin/instagram-insights.mjs auth login
-node ./skills/instagram-insights/bin/instagram-insights.mjs setup status
+./skills/instagram-insights/instagram-insights auth login
+./skills/instagram-insights/instagram-insights setup status
 ```

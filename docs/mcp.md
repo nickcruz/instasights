@@ -14,11 +14,11 @@ Both now return `410 Gone`.
 Use the Instagram Insights skill and bundled CLI instead:
 
 ```bash
-./skills/instagram-insights/instagram-insights.mjs auth login
-./skills/instagram-insights/instagram-insights.mjs setup status
-./skills/instagram-insights/instagram-insights.mjs sync run --wait
+./skills/instagram-insights/instagram-insights auth login
+./skills/instagram-insights/instagram-insights setup status
+./skills/instagram-insights/instagram-insights sync run --wait
 ```
 
 The CLI talks directly to `/api/v1/*` and authenticates through `/oauth/*`.
 
-On a fresh install, start from `./skills/instagram-insights/instagram-insights.mjs` so the skill can bootstrap the generated CLI into `./bin/` before running commands.
+On a fresh install, start from `./skills/instagram-insights/instagram-insights` so the skill can bootstrap the signed macOS CLI into `./bin/` before running commands.

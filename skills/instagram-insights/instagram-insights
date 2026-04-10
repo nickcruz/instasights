@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+DEFAULT_MANIFEST_URL="https://project-qah0p.vercel.app/api/cli/latest"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SKILL_ROOT="$SCRIPT_DIR"
+BIN_DIR="$SKILL_ROOT/bin"
+CLI_BIN="$BIN_DIR/instagram-insights"
+UPDATER_BIN="$BIN_DIR/instagram-insights-updater"
+VERSION_FILE="$BIN_DIR/instagram-insights.version.json"
+MANIFEST_URL="${INSTAGRAM_INSIGHTS_UPDATE_MANIFEST_URL:-$DEFAULT_MANIFEST_URL}"
+
+fail() {
+  printf '%s\n' "$1" >&2
+  exit 1
+}
+
+require_supported_host() {
+  local os arch
+  os="$(uname -s)"
+  arch="$(uname -m)"
+
+  [[ "$os" == "Darwin" ]] || fail "Instagram Insights CLI binaries currently support macOS only."
+  [[ "$arch" == "arm64" ]] || fail "Instagram Insights CLI binaries currently target Apple Silicon only."
+}
+
+extract_manifest_value() {
+  local key="$1"
+  /usr/bin/plutil -extract "$key" raw -o - "$2"
+}
+
+download_with_checksum() {
+  local url="$1"
+  local destination="$2"
+  local expected_sha="$3"
+  local actual_sha
+
+  curl --fail --silent --show-error --location "$url" --output "$destination"
+  actual_sha="$(shasum -a 256 "$destination" | awk '{ print $1 }')"
+  [[ "$actual_sha" == "$expected_sha" ]] || fail "Checksum mismatch while downloading $(basename "$destination")."
+}
+
+ensure_cli_installed() {
+  if [[ -x "$CLI_BIN" && -x "$UPDATER_BIN" && -f "$VERSION_FILE" ]]; then
+    return
+  fi
+
+  local manifest_file stage_dir
+  manifest_file="$(mktemp -t instagram-insights-manifest)"
+  stage_dir="$(mktemp -d -t instagram-insights-bootstrap)"
+  trap 'rm -f "$manifest_file"; rm -rf "$stage_dir"' EXIT
+
+  curl --fail --silent --show-error --location "$MANIFEST_URL" --output "$manifest_file"
+
+  local cli_url cli_sha updater_url updater_sha version_url version_sha
+  cli_url="$(extract_manifest_value "artifacts.cli.url" "$manifest_file")"
+  cli_sha="$(extract_manifest_value "artifacts.cli.sha256" "$manifest_file")"
+  updater_url="$(extract_manifest_value "artifacts.updater.url" "$manifest_file")"
+  updater_sha="$(extract_manifest_value "artifacts.updater.sha256" "$manifest_file")"
+  version_url="$(extract_manifest_value "artifacts.version.url" "$manifest_file")"
+  version_sha="$(extract_manifest_value "artifacts.version.sha256" "$manifest_file")"
+
+  download_with_checksum "$cli_url" "$stage_dir/instagram-insights" "$cli_sha"
+  download_with_checksum "$updater_url" "$stage_dir/instagram-insights-updater" "$updater_sha"
+  download_with_checksum "$version_url" "$stage_dir/instagram-insights.version.json" "$version_sha"
+
+  mkdir -p "$BIN_DIR"
+  mv "$stage_dir/instagram-insights" "$CLI_BIN"
+  mv "$stage_dir/instagram-insights-updater" "$UPDATER_BIN"
+  mv "$stage_dir/instagram-insights.version.json" "$VERSION_FILE"
+  chmod 755 "$CLI_BIN" "$UPDATER_BIN"
+  chmod 644 "$VERSION_FILE"
+
+  rm -f "$manifest_file"
+  rm -rf "$stage_dir"
+  trap - EXIT
+}
+
+require_supported_host
+ensure_cli_installed
+
+export INSTAGRAM_INSIGHTS_SKILL_ROOT="$SKILL_ROOT"
+exec "$CLI_BIN" "$@"

@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, copyFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
@@ -315,17 +315,19 @@ async function downloadManagedFile(stagingDir: string, file: RemoteUpdateFile) {
 }
 
 async function runUpdaterHelper(payloadPath: string) {
+  const skillRoot = resolveSkillRoot();
   const bundledHelperPath = resolveUpdaterEntrypointPath();
-  const helperCopyPath = path.join(
-    path.dirname(payloadPath),
-    "instagram-insights-updater.run.mjs",
-  );
-  const helperSource = await readFile(bundledHelperPath, "utf8");
-  await writeFile(helperCopyPath, helperSource, "utf8");
+  const helperCopyPath = path.join(path.dirname(payloadPath), "instagram-insights-updater.run");
+  await copyFile(bundledHelperPath, helperCopyPath);
+  await chmod(helperCopyPath, 0o755).catch(() => undefined);
 
   await new Promise<void>((resolve, reject) => {
-    const child = spawn(process.execPath, [helperCopyPath, "--payload", payloadPath], {
+    const child = spawn(helperCopyPath, ["--payload", payloadPath], {
       stdio: "inherit",
+      env: {
+        ...process.env,
+        INSTAGRAM_INSIGHTS_SKILL_ROOT: skillRoot,
+      },
     });
 
     child.once("error", reject);
@@ -425,12 +427,14 @@ export async function applyUpdate(
 }
 
 export async function relaunchCli(args: string[]) {
+  const skillRoot = resolveSkillRoot();
   const entrypoint = resolveSkillEntrypointPath();
   const exitCode = await new Promise<number>((resolve, reject) => {
-    const child = spawn(process.execPath, [entrypoint, ...args], {
+    const child = spawn(entrypoint, args, {
       stdio: "inherit",
       env: {
         ...process.env,
+        INSTAGRAM_INSIGHTS_SKILL_ROOT: skillRoot,
         [SKIP_UPDATE_CHECK_ENV]: "1",
       },
     });

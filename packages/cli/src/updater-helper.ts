@@ -1,4 +1,3 @@
-import { fileURLToPath } from "node:url";
 import { chmod, copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -15,13 +14,13 @@ export type ApplyStagedUpdateInput = {
   files: HelperFile[];
 };
 
-function parseArg(flag: string) {
-  const index = process.argv.indexOf(flag);
-  return index === -1 ? null : process.argv[index + 1] ?? null;
+function parseArg(flag: string, argv = process.argv) {
+  const index = argv.indexOf(flag);
+  return index === -1 ? null : argv[index + 1] ?? null;
 }
 
-function getRequiredArg(flag: string) {
-  const value = parseArg(flag);
+function getRequiredArg(flag: string, argv = process.argv) {
+  const value = parseArg(flag, argv);
 
   if (!value) {
     throw new Error(`Missing required argument: ${flag}`);
@@ -58,7 +57,7 @@ export async function applyStagedUpdate(input: ApplyStagedUpdateInput) {
     await mkdir(path.dirname(target), { recursive: true });
     await copyFile(source, target);
 
-    if (target.endsWith(".mjs")) {
+    if (!target.endsWith(".json")) {
       await chmod(target, 0o755).catch(() => undefined);
     }
   }
@@ -78,17 +77,8 @@ export async function applyStagedUpdate(input: ApplyStagedUpdateInput) {
   await chmod(versionPath, 0o644).catch(() => undefined);
 }
 
-async function main() {
-  const payloadPath = getRequiredArg("--payload");
+export async function runUpdaterHelperMain(argv = process.argv) {
+  const payloadPath = getRequiredArg("--payload", argv);
   const payload = JSON.parse(await readFile(payloadPath, "utf8")) as ApplyStagedUpdateInput;
   await applyStagedUpdate(payload);
-}
-
-const executedPath = process.argv[1]
-  ? path.resolve(process.argv[1])
-  : null;
-const currentModulePath = path.resolve(fileURLToPath(import.meta.url));
-
-if (executedPath === currentModulePath) {
-  await main();
 }
