@@ -8,6 +8,13 @@
       "when": 1775754490467,
       "tag": "0000_narrow_night_nurse",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1775800000000,
+      "tag": "0001_precomputed_analysis_artifacts",
+      "breakpoints": true
     }
   ]
 }

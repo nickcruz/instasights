@@ -3,6 +3,9 @@ import type {
   DeveloperApiKeySummary,
   InstagramMediaDetail,
   InstagramMediaListItem,
+  PrecomputedAnalysisPost,
+  PrecomputedAnalysisReport,
+  ReportResponse,
   InstagramSyncRunDetail,
   InstagramSyncRunSummary,
   LatestSnapshotResponse,
@@ -91,6 +94,12 @@ type TranscriptFailureInput = {
   transcriptModel?: string | null;
   transcriptClipSeconds?: number | null;
   transcriptMetadata?: Record<string, unknown> | null;
+};
+
+type PersistMediaAnalysisInput = {
+  syncRunId: string;
+  mediaId: string;
+  analysis: PrecomputedAnalysisPost;
 };
 
 type PaginationCursor = {
@@ -265,6 +274,8 @@ export function serializeSyncRunSummary(
 function serializeMediaListItem(
   row: RawMediaItem,
 ): InstagramMediaListItem {
+  const analysis = toRecord(row.analysis);
+
   return {
     id: row.instagramMediaId,
     instagramAccountId: row.instagramAccountId,
@@ -290,6 +301,22 @@ function serializeMediaListItem(
     transcriptError: row.transcriptError ?? null,
     transcriptMetadata: toRecord(row.transcriptMetadata),
     transcriptUpdatedAt: toIsoString(row.transcriptUpdatedAt),
+    transcript: typeof analysis?.transcript === "string" ? analysis.transcript : null,
+    hook: typeof analysis?.hook === "string" ? analysis.hook : null,
+    theme: typeof analysis?.theme === "string" ? analysis.theme : null,
+    hashtags: toStringArray(analysis?.hashtags),
+    views: typeof analysis?.views === "number" ? analysis.views : null,
+    reach: typeof analysis?.reach === "number" ? analysis.reach : null,
+    likes: typeof analysis?.likes === "number" ? analysis.likes : null,
+    saves: typeof analysis?.saves === "number" ? analysis.saves : null,
+    shares: typeof analysis?.shares === "number" ? analysis.shares : null,
+    comments: typeof analysis?.comments === "number" ? analysis.comments : null,
+    engagementRate:
+      typeof analysis?.engagementRate === "number" ? analysis.engagementRate : null,
+    analysisVersion:
+      typeof analysis?.analysisVersion === "string"
+        ? analysis.analysisVersion
+        : null,
     syncedAt: row.syncedAt.toISOString(),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
@@ -307,6 +334,41 @@ function serializeMediaDetail(
     errors: toArray(row.errors),
     raw: toRecord(row.raw),
   };
+}
+
+function stripFlatMetrics(
+  item: InstagramMediaListItem,
+): InstagramMediaListItem {
+  const {
+    transcript,
+    hook,
+    theme,
+    hashtags,
+    views,
+    reach,
+    likes,
+    saves,
+    shares,
+    comments,
+    engagementRate,
+    analysisVersion,
+    ...rest
+  } = item;
+
+  void transcript;
+  void hook;
+  void theme;
+  void hashtags;
+  void views;
+  void reach;
+  void likes;
+  void saves;
+  void shares;
+  void comments;
+  void engagementRate;
+  void analysisVersion;
+
+  return rest;
 }
 
 function serializeApiKey(
@@ -824,6 +886,7 @@ export async function persistInstagramSyncResult(input: SyncResultInput) {
         accountInsights: input.report.account_insights,
         analysisFacts: input.report.analysis_facts,
         highlights: input.report.highlights,
+        analysisReports: null,
         warnings: input.report.warnings,
         fetchManifest: input.report.fetch_manifest,
       })
@@ -834,6 +897,7 @@ export async function persistInstagramSyncResult(input: SyncResultInput) {
           accountInsights: input.report.account_insights,
           analysisFacts: input.report.analysis_facts,
           highlights: input.report.highlights,
+          analysisReports: null,
           warnings: input.report.warnings,
           fetchManifest: input.report.fetch_manifest,
         },
@@ -1248,6 +1312,11 @@ export async function getLatestSnapshotByUserId(
       accountInsights: toRecord(snapshotRow.snapshot.accountInsights) ?? {},
       analysisFacts: toRecord(snapshotRow.snapshot.analysisFacts) ?? {},
       highlights: toRecord(snapshotRow.snapshot.highlights) ?? {},
+      analysisReports:
+        ((toRecord(snapshotRow.snapshot.analysisReports) ?? {}) as Record<
+          string,
+          PrecomputedAnalysisReport
+        >),
       warnings: toArray(snapshotRow.snapshot.warnings) ?? [],
       fetchManifest: toRecord(snapshotRow.snapshot.fetchManifest) ?? {},
     },
@@ -1261,6 +1330,7 @@ export async function listInstagramMediaByUserId(input: {
   mediaType?: string | null;
   since?: string | null;
   until?: string | null;
+  includeFlatMetrics?: boolean;
 }): Promise<MediaListResponse> {
   const limit = clampLimit(input.limit);
   const cursor = decodeCursor(input.cursor);
@@ -1309,7 +1379,10 @@ export async function listInstagramMediaByUserId(input: {
   const lastRow = pageRows.at(-1);
 
   return {
-    items: pageRows.map(({ media }) => serializeMediaListItem(media)),
+    items: pageRows.map(({ media }) => {
+      const item = serializeMediaListItem(media);
+      return input.includeFlatMetrics ? item : stripFlatMetrics(item);
+    }),
     nextCursor: (() => {
       if (!hasMore || !lastRow) {
         return null;
@@ -1348,6 +1421,138 @@ export async function getInstagramMediaDetailById(input: {
 
   return {
     media: media ? serializeMediaDetail(media) : null,
+  };
+}
+
+export async function listInstagramMediaBySyncRunId(input: {
+  syncRunId: string;
+  userId: string;
+}) {
+  const rows = await getDb()
+    .select()
+    .from(instagramMediaItems)
+    .where(
+      and(
+        eq(instagramMediaItems.lastSyncRunId, input.syncRunId),
+        eq(instagramMediaItems.userId, input.userId),
+      ),
+    )
+    .orderBy(
+      desc(mediaSortAtExpression),
+      desc(instagramMediaItems.instagramMediaId),
+    );
+
+  return rows.map(serializeMediaDetail);
+}
+
+export async function persistInstagramMediaAnalysis(
+  input: PersistMediaAnalysisInput,
+) {
+  return (
+    await getDb()
+      .update(instagramMediaItems)
+      .set({
+        analysis: input.analysis,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(instagramMediaItems.lastSyncRunId, input.syncRunId),
+          eq(instagramMediaItems.instagramMediaId, input.mediaId),
+        ),
+      )
+      .returning()
+  )[0] ?? null;
+}
+
+export async function persistInstagramSnapshotAnalysisReport(input: {
+  syncRunId: string;
+  reportKey: string;
+  report: PrecomputedAnalysisReport;
+}) {
+  const snapshot =
+    (
+      await getDb()
+        .select()
+        .from(instagramAccountSnapshots)
+        .where(eq(instagramAccountSnapshots.syncRunId, input.syncRunId))
+        .limit(1)
+    )[0] ?? null;
+
+  if (!snapshot) {
+    return null;
+  }
+
+  const currentReports = toRecord(snapshot.analysisReports) ?? {};
+  const nextReports = {
+    ...currentReports,
+    [input.reportKey]: input.report,
+  };
+
+  return (
+    await getDb()
+      .update(instagramAccountSnapshots)
+      .set({
+        analysisReports: nextReports,
+      })
+      .where(eq(instagramAccountSnapshots.syncRunId, input.syncRunId))
+      .returning()
+  )[0] ?? null;
+}
+
+export async function getLatestAnalysisReportByUserId(input: {
+  userId: string;
+  reportKey: string;
+}): Promise<ReportResponse> {
+  const account = await getInstagramAccountByUserId(input.userId);
+
+  if (!account) {
+    return {
+      status: "not_linked",
+      account: null,
+      latestSyncRun: null,
+      report: null,
+    };
+  }
+
+  const snapshotRow = (
+    await getDb()
+      .select({
+        snapshot: instagramAccountSnapshots,
+        syncRun: instagramSyncRuns,
+      })
+      .from(instagramAccountSnapshots)
+      .innerJoin(
+        instagramSyncRuns,
+        eq(instagramSyncRuns.id, instagramAccountSnapshots.syncRunId),
+      )
+      .where(eq(instagramSyncRuns.userId, input.userId))
+      .orderBy(
+        desc(instagramAccountSnapshots.createdAt),
+        desc(instagramAccountSnapshots.syncRunId),
+      )
+      .limit(1)
+  )[0] ?? null;
+
+  if (!snapshotRow) {
+    return {
+      status: "not_synced",
+      account: serializeInstagramAccount(account),
+      latestSyncRun: null,
+      report: null,
+    };
+  }
+
+  const analysisReports = toRecord(snapshotRow.snapshot.analysisReports) ?? {};
+  const report = toRecord(analysisReports[input.reportKey]) as
+    | PrecomputedAnalysisReport
+    | null;
+
+  return {
+    status: report ? "ready" : "not_synced",
+    account: serializeInstagramAccount(account),
+    latestSyncRun: serializeSyncRunSummary(snapshotRow.syncRun),
+    report,
   };
 }
 

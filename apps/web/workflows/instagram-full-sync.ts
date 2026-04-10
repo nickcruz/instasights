@@ -14,6 +14,7 @@ import {
   createBootstrapStep,
   createEmptyProgress,
   failRunStep,
+  finalizeAnalysisArtifactsStep,
   fetchAccountInsightsStep,
   fetchMediaCatalogStep,
   fetchMediaDetailBatchStep,
@@ -407,6 +408,26 @@ export async function instagramFullSyncWorkflow(
         });
       }
     }
+
+    currentStep = "finalize-analysis";
+    progressPercent = 99;
+    await markRunProgress({
+      runId: input.syncRunId,
+      status: "running",
+      currentStep,
+      progressPercent,
+      statusMessage: "Finalizing precomputed analysis artifacts",
+      progress: {
+        ...progress,
+        activeTranscriptMediaId: null,
+      },
+    });
+
+    await finalizeAnalysisArtifactsStep({
+      syncRunId: input.syncRunId,
+      userId: input.userId,
+      accountPayload: profile.accountPayload,
+    });
 
     await completeRunStep({
       syncRunId: input.syncRunId,

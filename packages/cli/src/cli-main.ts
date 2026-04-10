@@ -18,6 +18,7 @@ import { clearAuthTokens, readAuthState, writeAuthState } from "./auth-store";
 import { openBrowser } from "./browser";
 import { DEFAULT_APP_URL, DEFAULT_STALE_AFTER_HOURS } from "./constants";
 import { InstagramInsightsApiClient } from "./api-client";
+import { buildMediaListSearchParams } from "./media-query";
 import { fail, printJson, printText } from "./output";
 import { normalizeAppUrl, runBrowserOAuthLogin } from "./oauth";
 import { deriveSetupStatus } from "./status";
@@ -98,8 +99,9 @@ function printTopLevelHelp() {
       "  setup status [--stale-after-hours <n>] [--open-link]",
       "  account overview",
       "  snapshot latest",
-      "  media list [--limit <n>] [--media-type <type>] [--since <iso>] [--until <iso>]",
+      "  media list [--limit <n>] [--media-type <type>] [--since <iso>] [--until <iso>] [--days <n>] [--flat-metrics]",
       "  media get <mediaId>",
+      "  media analyze [--days <n>]",
       "  sync list [--limit <n>]",
       "  sync get <syncRunId>",
       "  sync run [--force] [--stale-after-hours <n>] [--wait]",
@@ -263,6 +265,8 @@ class InstagramInsightsCli {
   @commandOption("--media-type <type>", "Filter by media type")
   @commandOption("--since <iso>", "Only include media posted at or after this ISO timestamp")
   @commandOption("--until <iso>", "Only include media posted at or before this ISO timestamp")
+  @commandOption("--days <n>", "Only include media from the trailing N days")
+  @commandOption("--flat-metrics", "Include stored flat metrics and analysis fields")
   async media(
     this: RootCommand,
     @requiredArg("action") action: string,
@@ -286,27 +290,36 @@ class InstagramInsightsCli {
           mediaType?: string;
           since?: string;
           until?: string;
+          days?: string;
+          flatMetrics?: boolean;
         };
-        const searchParams = new URLSearchParams();
         const limit = parseOptionalInt(options.limit, "limit");
+        const days = parseOptionalInt(options.days, "days");
 
-        if (limit) {
-          searchParams.set("limit", String(limit));
-        }
-
-        if (options.mediaType) {
-          searchParams.set("mediaType", options.mediaType);
-        }
-
-        if (options.since) {
-          searchParams.set("since", options.since);
-        }
-
-        if (options.until) {
-          searchParams.set("until", options.until);
-        }
+        const searchParams = buildMediaListSearchParams({
+          limit,
+          mediaType: options.mediaType,
+          since: options.since,
+          until: options.until,
+          days: days ?? undefined,
+          flatMetrics: options.flatMetrics === true,
+        });
 
         printJson(await client.listMedia(searchParams));
+        return;
+      }
+
+      if (action === "analyze") {
+        const days = parseOptionalInt(
+          (this as RootCommand & { days?: string }).days,
+          "days",
+        ) ?? 30;
+
+        if (days !== 30) {
+          fail("media analyze currently supports only --days 30.", { days });
+        }
+
+        printJson(await client.getReport(days));
         return;
       }
 

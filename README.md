@@ -36,6 +36,7 @@ The supported CLI target is macOS on Apple Silicon. After install, run the skill
 ./skills/instagram-insights/instagram-insights auth login
 ./skills/instagram-insights/instagram-insights setup status
 ./skills/instagram-insights/instagram-insights sync run --wait
+./skills/instagram-insights/instagram-insights media analyze --days 30
 ```
 
 ## Supported CLI Commands
@@ -46,8 +47,9 @@ The supported CLI target is macOS on Apple Silicon. After install, run the skill
 - `setup status`
 - `account overview`
 - `snapshot latest`
-- `media list`
+- `media list [--days <n>] [--flat-metrics]`
 - `media get <mediaId>`
+- `media analyze [--days 30]`
 - `sync list`
 - `sync get <syncRunId>`
 - `sync run [--wait]`
@@ -87,6 +89,7 @@ The skill and CLI talk to the authenticated REST surface under `/api/v1/*`:
 - `GET /api/v1/snapshot/latest`
 - `GET /api/v1/media`
 - `GET /api/v1/media/:mediaId`
+- `GET /api/v1/report?days=30`
 - `GET /api/v1/sync-runs`
 - `GET /api/v1/sync-runs/:syncRunId`
 - `POST /api/v1/sync-runs`
