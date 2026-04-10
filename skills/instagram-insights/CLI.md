@@ -2,7 +2,7 @@
 
 This document explains the bundled `instagram-insights` CLI in more detail than the quick command list in the main skill.
 
-Run the launcher from this skill directory so it can bootstrap the signed macOS binary first:
+Run the launcher from this skill directory so it can verify Node and execute the bundled MJS runtime:
 
 ```bash
 ./instagram-insights
@@ -16,10 +16,10 @@ If you are in the repository root, use:
 
 ## Global behavior
 
-- Target platform: macOS on Apple Silicon.
-- The launcher installs the managed binary into `./bin/` on first run.
+- Required runtime: Node.js 20 or newer.
+- The launcher runs the committed managed MJS files from `./bin/`.
 - OAuth tokens are stored in `./.auth/state.json`.
-- Runtime-only state lives in `./.auth/`, `./.cache/`, and `./bin/`.
+- Runtime-only state lives in `./.auth/` and `./.cache/`.
 - Data-returning commands print JSON by default.
 
 ## Global options
@@ -236,7 +236,7 @@ Flags:
 - `--force`
   Reinstalls the published version even if the current version matches.
 
-Use this when you want to refresh the managed binary without waiting for the normal background update flow.
+Use this when you want to refresh the managed MJS runtime without waiting for the normal background update flow.
 
 ## Recommended Flows
 

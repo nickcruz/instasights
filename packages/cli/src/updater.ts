@@ -19,6 +19,7 @@ import {
   getConfiguredManifestUrl,
   isAutoUpdateDisabled,
   isManagedSkillInstall,
+  MANAGED_SKILL_FILES,
   readInstalledVersionMetadata,
   readUpdateCheckCache,
   resolveSkillEntrypointPath,
@@ -152,6 +153,25 @@ function validateRemoteManifest(input: unknown): RemoteUpdateManifest | null {
   };
 }
 
+function hasCompatibleManagedFiles(files: RemoteUpdateFile[]) {
+  if (files.length !== MANAGED_SKILL_FILES.length) {
+    return false;
+  }
+
+  const expected = new Set<string>(MANAGED_SKILL_FILES);
+  const seen = new Set<string>();
+
+  for (const file of files) {
+    if (!expected.has(file.path) || seen.has(file.path)) {
+      return false;
+    }
+
+    seen.add(file.path);
+  }
+
+  return seen.size === expected.size;
+}
+
 async function fetchRemoteManifest(manifestUrl: string) {
   logUpdate(`Fetching update manifest from ${manifestUrl}`);
   const response = await fetch(manifestUrl, {
@@ -255,6 +275,19 @@ export async function checkForUpdates(
       });
     }
 
+    if (!hasCompatibleManagedFiles(manifest.files)) {
+      return getDefaultCheckResult("invalid-manifest", {
+        manifestUrl,
+        localVersion,
+        legacyInstall,
+        remoteVersion: manifest.version,
+        notes: manifest.notes,
+        manifest,
+        error:
+          "Remote manifest targets a legacy artifact layout and cannot be applied to the bundled Node runtime.",
+      });
+    }
+
     const comparison =
       localVersion === null ? 1 : compareVersions(manifest.version, localVersion);
     const updateAvailable =
@@ -303,7 +336,9 @@ function resolveManagedPath(baseDir: string, relativePath: string) {
 
 async function downloadManagedFile(stagingDir: string, file: RemoteUpdateFile) {
   logUpdate(`Downloading ${file.path} from ${file.url}`);
-  const response = await fetch(file.url);
+  const response = await fetch(file.url, {
+    signal: AbortSignal.timeout(15_000),
+  });
 
   if (!response.ok) {
     throw new Error(`Download failed for ${file.path}: ${response.status}`);
@@ -326,12 +361,15 @@ async function downloadManagedFile(stagingDir: string, file: RemoteUpdateFile) {
 async function runUpdaterHelper(payloadPath: string) {
   const skillRoot = resolveSkillRoot();
   const bundledHelperPath = resolveUpdaterEntrypointPath();
-  const helperCopyPath = path.join(path.dirname(payloadPath), "instagram-insights-updater.run");
+  const helperCopyPath = path.join(
+    path.dirname(payloadPath),
+    "instagram-insights-updater.run.mjs",
+  );
   await copyFile(bundledHelperPath, helperCopyPath);
   await chmod(helperCopyPath, 0o755).catch(() => undefined);
 
   await new Promise<void>((resolve, reject) => {
-    const child = spawn(helperCopyPath, ["--payload", payloadPath], {
+    const child = spawn(process.execPath, [helperCopyPath, "--payload", payloadPath], {
       stdio: "inherit",
       env: {
         ...process.env,
@@ -365,6 +403,20 @@ export async function applyUpdate(
       legacyInstall: checkResult.legacyInstall,
       notes: checkResult.notes,
       reason: checkResult.error ?? "No remote manifest is available.",
+    };
+  }
+
+  if (!hasCompatibleManagedFiles(checkResult.manifest.files)) {
+    return {
+      applied: false,
+      previousVersion: checkResult.localVersion,
+      currentVersion: checkResult.currentVersion,
+      manifestUrl: checkResult.manifestUrl,
+      remoteVersion: checkResult.remoteVersion,
+      legacyInstall: checkResult.legacyInstall,
+      notes: checkResult.notes,
+      reason:
+        "Remote manifest targets a legacy artifact layout and cannot be applied to the bundled Node runtime.",
     };
   }
 
@@ -443,7 +495,7 @@ export async function relaunchCli(args: string[]) {
   const skillRoot = resolveSkillRoot();
   const entrypoint = resolveSkillEntrypointPath();
   const exitCode = await new Promise<number>((resolve, reject) => {
-    const child = spawn(entrypoint, args, {
+    const child = spawn(process.execPath, [entrypoint, ...args], {
       stdio: "inherit",
       env: {
         ...process.env,

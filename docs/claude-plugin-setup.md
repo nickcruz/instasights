@@ -1,6 +1,6 @@
 # Claude Plugin Setup
 
-Instagram Insights now installs as one skill with a bundled macOS CLI.
+Instagram Insights now installs as one skill with a bundled Node-based CLI.
 
 ## Install from the repository marketplace
 
@@ -12,11 +12,11 @@ Instagram Insights now installs as one skill with a bundled macOS CLI.
 ## What happens during install
 
 1. Claude installs the Instagram Insights skill bundle.
-2. The skill exposes a stable launcher at `./instagram-insights` that installs the latest signed CLI binaries into `./bin/` before calling `./bin/instagram-insights`.
+2. The skill exposes a stable launcher at `./instagram-insights` that verifies Node.js 20+ and then calls the bundled runtime at `./bin/instagram-insights.mjs`.
 3. The CLI authenticates against the hosted OAuth endpoints under `/oauth/*`.
 4. The hosted app finishes Google sign-in in the browser and resumes the waiting localhost callback.
 5. The installed skill stores auth state in its own `.auth/state.json` file.
-6. The skill's `.skillignore` excludes `.auth/`, `.cache/`, and `bin/` so local auth, cache, and downloaded binaries are not synced or published.
+6. The skill's `.skillignore` excludes `.auth/` and `.cache/` so local auth and cache data are not synced or published.
 
 ## First run
 
@@ -65,4 +65,4 @@ https://YOUR_APP_DOMAIN/developers
 
 That page includes status hints, CLI examples, and the legacy API-key path.
 
-The supported binary target is macOS on Apple Silicon. `INSTAGRAM_INSIGHTS_UPDATE_MANIFEST_URL` can override the hosted manifest URL when you need to test a staging build.
+Node.js 20+ is required. `INSTAGRAM_INSIGHTS_UPDATE_MANIFEST_URL` can override the hosted manifest URL when you need to test a staging build.

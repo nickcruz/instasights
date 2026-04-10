@@ -5,13 +5,13 @@ import { resolve, posix } from "node:path";
 const MANAGED_SKILL_FILES = [
   {
     key: "cli",
-    artifactPath: "instagram-insights",
-    remotePath: "bin/instagram-insights",
+    artifactPath: "instagram-insights.mjs",
+    remotePath: "bin/instagram-insights.mjs",
   },
   {
     key: "updater",
-    artifactPath: "instagram-insights-updater",
-    remotePath: "bin/instagram-insights-updater",
+    artifactPath: "instagram-insights-updater.mjs",
+    remotePath: "bin/instagram-insights-updater.mjs",
   },
   {
     key: "version",

@@ -2,33 +2,12 @@
 
 set -euo pipefail
 
-DEFAULT_MANIFEST_URL="https://project-qah0p.vercel.app/api/cli/latest"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SKILL_ROOT="$SCRIPT_DIR"
 BIN_DIR="$SKILL_ROOT/bin"
-CLI_BIN="$BIN_DIR/instagram-insights"
-UPDATER_BIN="$BIN_DIR/instagram-insights-updater"
+CLI_ENTRY="$BIN_DIR/instagram-insights.mjs"
+UPDATER_ENTRY="$BIN_DIR/instagram-insights-updater.mjs"
 VERSION_FILE="$BIN_DIR/instagram-insights.version.json"
-MANIFEST_URL="${INSTAGRAM_INSIGHTS_UPDATE_MANIFEST_URL:-$DEFAULT_MANIFEST_URL}"
-DEV_CLI_ENTRY="$SKILL_ROOT/../../packages/cli/dist/index.mjs"
-CURL_ARGS=(
-  --fail
-  --silent
-  --show-error
-  --location
-  --retry 2
-  --retry-delay 1
-)
-MANIFEST_CURL_ARGS=(
-  "${CURL_ARGS[@]}"
-  --connect-timeout 5
-  --max-time 15
-)
-DOWNLOAD_CURL_ARGS=(
-  "${CURL_ARGS[@]}"
-  --connect-timeout 10
-  --max-time 600
-)
 
 fail() {
   printf '%s\n' "$1" >&2
@@ -39,94 +18,29 @@ info() {
   printf '%s\n' "$1" >&2
 }
 
-require_supported_host() {
-  local os arch
-  os="$(uname -s)"
-  arch="$(uname -m)"
-
-  [[ "$os" == "Darwin" ]] || fail "Instagram Insights CLI binaries currently support macOS only."
-  [[ "$arch" == "arm64" ]] || fail "Instagram Insights CLI binaries currently target Apple Silicon only."
+require_node() {
+  command -v node >/dev/null 2>&1 || fail "Instagram Insights requires Node.js 20 or newer on your PATH."
 }
 
-extract_manifest_value() {
-  local key="$1"
-  /usr/bin/plutil -extract "$key" raw -o - "$2"
+require_node_version() {
+  local version major
+  version="$(node --version 2>/dev/null)" || fail "Unable to read the installed Node.js version."
+  version="${version#v}"
+  major="${version%%.*}"
+
+  [[ "$major" =~ ^[0-9]+$ ]] || fail "Unable to parse the installed Node.js version."
+  (( major >= 20 )) || fail "Instagram Insights requires Node.js 20 or newer. Found v${version}."
 }
 
-download_with_checksum() {
-  local url="$1"
-  local destination="$2"
-  local expected_sha="$3"
-  local actual_sha
-
-  info "Downloading $(basename "$destination") from $url"
-  curl "${DOWNLOAD_CURL_ARGS[@]}" "$url" --output "$destination"
-  info "Verifying checksum for $(basename "$destination")"
-  actual_sha="$(shasum -a 256 "$destination" | awk '{ print $1 }')"
-  [[ "$actual_sha" == "$expected_sha" ]] || fail "Checksum mismatch while downloading $(basename "$destination")."
+ensure_cli_runtime() {
+  [[ -f "$CLI_ENTRY" ]] || fail "Bundled CLI runtime is missing from $CLI_ENTRY. Run yarn build:cli or reinstall the skill."
+  [[ -f "$UPDATER_ENTRY" ]] || fail "Bundled updater runtime is missing from $UPDATER_ENTRY. Run yarn build:cli or reinstall the skill."
+  [[ -f "$VERSION_FILE" ]] || info "Version metadata is missing; the updater will treat this install as legacy until the next update."
 }
 
-ensure_dev_cli_ready() {
-  if [[ -f "$DEV_CLI_ENTRY" ]]; then
-    export INSTAGRAM_INSIGHTS_SKILL_ROOT="$SKILL_ROOT"
-    export INSTAGRAM_INSIGHTS_SKIP_UPDATE_CHECK=1
-    exec node "$DEV_CLI_ENTRY" "$@"
-  fi
-}
-
-ensure_cli_installed() {
-  if [[ -x "$CLI_BIN" && -x "$UPDATER_BIN" && -f "$VERSION_FILE" ]]; then
-    return
-  fi
-
-  info "Bootstrapping Instagram Insights CLI into $BIN_DIR (first run downloads the signed macOS binary and may take a minute)..."
-
-  local manifest_file stage_dir
-  manifest_file="$(mktemp -t instagram-insights-manifest)"
-  stage_dir="$(mktemp -d -t instagram-insights-bootstrap)"
-  trap 'rm -f "$manifest_file"; rm -rf "$stage_dir"' EXIT
-
-  info "Fetching CLI manifest from $MANIFEST_URL"
-  if ! curl "${MANIFEST_CURL_ARGS[@]}" "$MANIFEST_URL" --output "$manifest_file"; then
-    rm -f "$manifest_file"
-    rm -rf "$stage_dir"
-    trap - EXIT
-    return 1
-  fi
-
-  local cli_url cli_sha updater_url updater_sha version_url version_sha
-  cli_url="$(extract_manifest_value "artifacts.cli.url" "$manifest_file")"
-  cli_sha="$(extract_manifest_value "artifacts.cli.sha256" "$manifest_file")"
-  updater_url="$(extract_manifest_value "artifacts.updater.url" "$manifest_file")"
-  updater_sha="$(extract_manifest_value "artifacts.updater.sha256" "$manifest_file")"
-  version_url="$(extract_manifest_value "artifacts.version.url" "$manifest_file")"
-  version_sha="$(extract_manifest_value "artifacts.version.sha256" "$manifest_file")"
-
-  download_with_checksum "$cli_url" "$stage_dir/instagram-insights" "$cli_sha"
-  download_with_checksum "$updater_url" "$stage_dir/instagram-insights-updater" "$updater_sha"
-  download_with_checksum "$version_url" "$stage_dir/instagram-insights.version.json" "$version_sha"
-
-  mkdir -p "$BIN_DIR"
-  info "Installing downloaded CLI files into $BIN_DIR"
-  mv "$stage_dir/instagram-insights" "$CLI_BIN"
-  mv "$stage_dir/instagram-insights-updater" "$UPDATER_BIN"
-  mv "$stage_dir/instagram-insights.version.json" "$VERSION_FILE"
-  chmod 755 "$CLI_BIN" "$UPDATER_BIN"
-  chmod 644 "$VERSION_FILE"
-
-  info "Instagram Insights CLI bootstrap complete."
-
-  rm -f "$manifest_file"
-  rm -rf "$stage_dir"
-  trap - EXIT
-}
-
-require_supported_host
-ensure_dev_cli_ready "$@"
-if ! ensure_cli_installed; then
-  ensure_dev_cli_ready "$@"
-  fail "Unable to bootstrap the Instagram Insights CLI from $MANIFEST_URL. Set INSTAGRAM_INSIGHTS_DISABLE_AUTO_UPDATE=1 after the CLI is installed, or build the local CLI with yarn build:cli."
-fi
+require_node
+require_node_version
+ensure_cli_runtime
 
 export INSTAGRAM_INSIGHTS_SKILL_ROOT="$SKILL_ROOT"
-exec "$CLI_BIN" "$@"
+exec node "$CLI_ENTRY" "$@"

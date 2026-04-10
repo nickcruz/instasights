@@ -1,6 +1,6 @@
 ---
 name: Instagram Insights
-description: Use the bundled macOS Instagram Insights CLI to authenticate with Google, link Instagram, sync account data, and inspect account, snapshot, media, and sync-run data from the hosted REST API.
+description: Use the bundled Node-based Instagram Insights CLI to authenticate with Google, link Instagram, sync account data, and inspect account, snapshot, media, sync-run data, and HTML reports from the hosted REST API.
 ---
 
 Use this skill whenever the user wants to work with Instagram Insights data.
@@ -10,13 +10,13 @@ For a deeper command-by-command reference, see [CLI.md](/Users/nickcruz/repos/in
 Core rules:
 
 - Use the bundled CLI, not raw HTTP requests and not MCP tools.
-- Target: macOS on Apple Silicon.
+- Target: Node.js 20 or newer.
 - Resolve paths relative to this skill folder.
-- Start from `./instagram-insights` so the launcher can install the latest signed CLI binaries into `./bin/` before running commands.
+- Start from `./instagram-insights` so the launcher can verify Node and run the bundled MJS runtime from `./bin/`.
 - The CLI stores OAuth tokens in `./.auth/state.json` inside this installed skill folder.
-- Runtime-only skill state lives under `./.auth/`, `./.cache/`, and `./bin/`, and `./.skillignore` excludes those paths from SkillTree sync and publish.
+- Runtime-only skill state lives under `./.auth/` and `./.cache/`, and `./.skillignore` excludes those paths from SkillTree sync and publish.
 - Data-returning commands already default to JSON output.
-- The installed skill bootstraps the latest signed CLI binaries when `./bin/` is missing, then the downloaded CLI keeps itself updated.
+- The installed skill ships with committed MJS runtime files in `./bin/`, and the updater keeps those files refreshed over time.
 
 Preferred shortcut:
 
@@ -33,10 +33,10 @@ Invoke it from this skill folder. If you are in the repo root, use:
 Generated direct bin entrypoint:
 
 ```bash
-./bin/instagram-insights
+node ./bin/instagram-insights.mjs
 ```
 
-That entrypoint appears after the launcher has installed the runtime or after a local `yarn package:cli:macos`.
+That entrypoint is committed with the skill and refreshed by `yarn build:cli` during development.
 
 Manual update commands:
 

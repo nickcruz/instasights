@@ -21,4 +21,4 @@ The hosted MCP deployment path has been retired in favor of the Instagram Insigh
 
 ## Notes
 
-The existing OAuth storage tables are still used internally, but the public product surface is now the skill and bundled CLI rather than the hosted MCP server.
+The existing OAuth storage tables are still used internally, but the public product surface is now the skill and bundled Node-based CLI rather than the hosted MCP server.

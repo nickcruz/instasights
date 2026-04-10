@@ -11,11 +11,17 @@ async function main() {
     });
 
     if (result.updateAvailable) {
-      const applyResult = await applyUpdate(result);
+      try {
+        const applyResult = await applyUpdate(result);
 
-      if (applyResult.applied) {
-        await relaunchCli(args);
-        return;
+        if (applyResult.applied) {
+          await relaunchCli(args);
+          return;
+        }
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Unable to apply automatic updates.";
+        console.error(`[instagram-insights:update] ${message}`);
       }
     }
   }

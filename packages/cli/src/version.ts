@@ -18,8 +18,8 @@ export const SKIP_UPDATE_CHECK_ENV = "INSTAGRAM_INSIGHTS_SKIP_UPDATE_CHECK";
 export const UPDATE_MANIFEST_URL_ENV = "INSTAGRAM_INSIGHTS_UPDATE_MANIFEST_URL";
 
 export const MANAGED_SKILL_FILES = [
-  "bin/instagram-insights",
-  "bin/instagram-insights-updater",
+  "bin/instagram-insights.mjs",
+  "bin/instagram-insights-updater.mjs",
   "bin/instagram-insights.version.json",
 ] as const;
 
@@ -32,11 +32,11 @@ export function resolveUpdateCachePath(skillRoot = resolveSkillRoot()) {
 }
 
 export function resolveSkillEntrypointPath(skillRoot = resolveSkillRoot()) {
-  return path.join(skillRoot, "bin", "instagram-insights");
+  return path.join(skillRoot, "bin", "instagram-insights.mjs");
 }
 
 export function resolveUpdaterEntrypointPath(skillRoot = resolveSkillRoot()) {
-  return path.join(skillRoot, "bin", "instagram-insights-updater");
+  return path.join(skillRoot, "bin", "instagram-insights-updater.mjs");
 }
 
 export function isManagedSkillInstall(skillRoot = resolveSkillRoot()) {

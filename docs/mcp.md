@@ -21,4 +21,4 @@ Use the Instagram Insights skill and bundled CLI instead:
 
 The CLI talks directly to `/api/v1/*` and authenticates through `/oauth/*`.
 
-On a fresh install, start from `./skills/instagram-insights/instagram-insights` so the skill can bootstrap the signed macOS CLI into `./bin/` before running commands.
+On a fresh install, start from `./skills/instagram-insights/instagram-insights` so the skill can verify Node.js 20+ and run the bundled MJS CLI from `./bin/`.

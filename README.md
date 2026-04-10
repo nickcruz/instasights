@@ -11,7 +11,7 @@
   <a href="./services/transcriber"><img alt="FastAPI Whisper" src="https://img.shields.io/badge/FastAPI-Whisper-009688?logo=fastapi&logoColor=white&style=for-the-badge"/></a>
 </p>
 
-Instagram Insights is a skill-first Instagram analytics workflow built around one installable skill, a macOS CLI binary, a hosted REST API, and durable sync/transcription services.
+Instagram Insights is a skill-first Instagram analytics workflow built around one installable skill, a bundled Node-powered CLI, a hosted REST API, and durable sync/transcription services.
 
 ## What This Repo Contains
 
@@ -30,7 +30,7 @@ Add the repository as a Claude marketplace and install the skill package:
 /plugin install instagram-insights@kingscrosslabs-marketplace
 ```
 
-The supported CLI target is macOS on Apple Silicon. After install, run the skill launcher so it can bootstrap the latest signed CLI binaries into the skill before executing commands:
+The CLI requires Node.js 20 or newer. After install, run the skill launcher so it can execute the bundled MJS runtime from the skill:
 
 ```bash
 ./skills/instagram-insights/instagram-insights auth login
@@ -65,11 +65,11 @@ All data-returning commands default to JSON output.
 
 ## CLI Updates
 
-- The committed skill launcher installs signed CLI binaries into `skills/instagram-insights/bin/` on first run instead of relying on `node ...mjs`.
-- If `bin/` is missing, the launcher downloads the latest signed macOS artifacts from the hosted manifest endpoint or from `INSTAGRAM_INSIGHTS_UPDATE_MANIFEST_URL` when you override it.
-- After bootstrap, the installed CLI continues checking for newer releases through its normal self-update flow.
+- The committed skill launcher executes `node skills/instagram-insights/bin/instagram-insights.mjs` after verifying Node.js 20+ is available.
+- The skill now ships with committed MJS runtime files in `skills/instagram-insights/bin/` instead of bootstrapping a separate runtime download on first run.
+- The installed CLI continues checking for newer releases through its normal self-update flow.
 - Published CLI bundles are versioned independently and store the installed version in `skills/instagram-insights/bin/instagram-insights.version.json`.
-- The skill ships with `skills/instagram-insights/.skillignore` so `bin/`, `.auth/`, and `.cache/` stay local-only and are excluded from SkillTree sync/publish.
+- The skill ships with `skills/instagram-insights/.skillignore` so `.auth/` and `.cache/` stay local-only and are excluded from SkillTree sync/publish.
 - If the version file is missing, the updater treats the install as legacy and prefers the newest published release.
 - To inspect or force the updater manually, run:
 
@@ -84,7 +84,7 @@ All data-returning commands default to JSON output.
 - The CLI registers a public OAuth client against `/oauth/register`.
 - The browser handoff completes Google sign-in on the hosted app.
 - The CLI receives the callback on `127.0.0.1`, exchanges the code at `/oauth/token`, and stores auth state in `skills/instagram-insights/.auth/state.json`.
-- Runtime-only skill data remains local inside `skills/instagram-insights/.auth/`, `skills/instagram-insights/.cache/`, and `skills/instagram-insights/bin/`; those paths are excluded by `skills/instagram-insights/.skillignore`.
+- Runtime-only skill data remains local inside `skills/instagram-insights/.auth/` and `skills/instagram-insights/.cache/`; those paths are excluded by `skills/instagram-insights/.skillignore`.
 - Instagram linking still happens through the hosted `/api/login` handoff.
 
 ## Hosted API
@@ -120,17 +120,16 @@ Useful commands:
 
 ```bash
 yarn build:cli
-yarn package:cli:macos
 yarn typecheck
 yarn test:cli
 yarn test:web
 python3 -m pytest services/transcriber/tests
 ```
 
-The packaged macOS binaries written into the skill live at:
+The managed MJS runtime written into the skill lives at:
 
 ```text
-skills/instagram-insights/bin/instagram-insights
+skills/instagram-insights/bin/instagram-insights.mjs
 ```
 
 ## License
