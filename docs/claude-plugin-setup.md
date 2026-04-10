@@ -16,6 +16,7 @@ Instagram Insights now installs as one skill with a bundled macOS CLI.
 3. The CLI authenticates against the hosted OAuth endpoints under `/oauth/*`.
 4. The hosted app finishes Google sign-in in the browser and resumes the waiting localhost callback.
 5. The installed skill stores auth state in its own `.auth/state.json` file.
+6. The skill's `.skillignore` excludes `.auth/`, `.cache/`, and `bin/` so local auth, cache, and downloaded binaries are not synced or published.
 
 ## First run
 

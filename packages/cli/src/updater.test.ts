@@ -1,12 +1,23 @@
 import assert from "node:assert/strict";
 import http from "node:http";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 
 import { checkForUpdates } from "./updater";
 import { writeInstalledVersionMetadata } from "./version";
+
+test("committed .skillignore excludes local-only skill state", async () => {
+  const skillIgnore = await readFile(
+    new URL("../../../skills/instagram-insights/.skillignore", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(skillIgnore, /^\.auth\/$/m);
+  assert.match(skillIgnore, /^\.cache\/$/m);
+  assert.match(skillIgnore, /^bin\/$/m);
+});
 
 async function createManifestServer(version: string) {
   let manifestRequests = 0;

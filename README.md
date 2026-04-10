@@ -63,6 +63,7 @@ All data-returning commands default to JSON output.
 - If `bin/` is missing, the launcher downloads the latest signed macOS artifacts from the hosted manifest endpoint or from `INSTAGRAM_INSIGHTS_UPDATE_MANIFEST_URL` when you override it.
 - After bootstrap, the installed CLI continues checking for newer releases through its normal self-update flow.
 - Published CLI bundles are versioned independently and store the installed version in `skills/instagram-insights/bin/instagram-insights.version.json`.
+- The skill ships with `skills/instagram-insights/.skillignore` so `bin/`, `.auth/`, and `.cache/` stay local-only and are excluded from SkillTree sync/publish.
 - If the version file is missing, the updater treats the install as legacy and prefers the newest published release.
 - To inspect or force the updater manually, run:
 
@@ -77,6 +78,7 @@ All data-returning commands default to JSON output.
 - The CLI registers a public OAuth client against `/oauth/register`.
 - The browser handoff completes Google sign-in on the hosted app.
 - The CLI receives the callback on `127.0.0.1`, exchanges the code at `/oauth/token`, and stores auth state in `skills/instagram-insights/.auth/state.json`.
+- Runtime-only skill data remains local inside `skills/instagram-insights/.auth/`, `skills/instagram-insights/.cache/`, and `skills/instagram-insights/bin/`; those paths are excluded by `skills/instagram-insights/.skillignore`.
 - Instagram linking still happens through the hosted `/api/login` handoff.
 
 ## Hosted API

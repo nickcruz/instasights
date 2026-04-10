@@ -12,6 +12,7 @@ Core rules:
 - Resolve paths relative to this skill folder.
 - Start from `./instagram-insights` so the launcher can install the latest signed CLI binaries into `./bin/` before running commands.
 - The CLI stores OAuth tokens in `./.auth/state.json` inside this installed skill folder.
+- Runtime-only skill state lives under `./.auth/`, `./.cache/`, and `./bin/`, and `./.skillignore` excludes those paths from SkillTree sync and publish.
 - Data-returning commands already default to JSON output.
 - The installed skill bootstraps the latest signed CLI binaries when `./bin/` is missing, then the downloaded CLI keeps itself updated.
 

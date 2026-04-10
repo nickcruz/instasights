@@ -163,6 +163,7 @@ async function prepareManualDistribution(targetPaths) {
   await copyFile(path.join(skillRoot, "instagram-insights"), path.join(manualRoot, "instagram-insights"));
   await chmod(path.join(manualRoot, "instagram-insights"), 0o755).catch(() => undefined);
   await copyFile(path.join(skillRoot, "SKILL.md"), path.join(manualRoot, "SKILL.md"));
+  await copyFile(path.join(skillRoot, ".skillignore"), path.join(manualRoot, ".skillignore"));
   await cp(path.join(skillRoot, "agents"), path.join(manualRoot, "agents"), { recursive: true });
 
   const manualBinDir = path.join(manualRoot, "bin");
