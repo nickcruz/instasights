@@ -1,4 +1,4 @@
 interface:
   display_name: "Instagram Insights"
-  short_description: "Authenticate, sync, and inspect Instagram Insights with the bundled CLI"
-  default_prompt: "Use Instagram Insights to authenticate if needed, check setup status, sync when stale, and inspect account or media data."
+  short_description: "Authenticate, sync, inspect data, and export HTML reports with the bundled CLI"
+  default_prompt: "Use Instagram Insights to authenticate if needed, check setup status, sync when stale, inspect account or media data, and generate HTML dashboard reports when helpful."

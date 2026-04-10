@@ -21,6 +21,7 @@ import { InstagramInsightsApiClient } from "./api-client";
 import { buildMediaListSearchParams } from "./media-query";
 import { fail, printJson, printText } from "./output";
 import { normalizeAppUrl, runBrowserOAuthLogin } from "./oauth";
+import { generateHtmlReport } from "./report-generator";
 import { deriveSetupStatus } from "./status";
 import { applyUpdate, checkForUpdates } from "./updater";
 import { getCliVersion } from "./version";
@@ -102,6 +103,7 @@ function printTopLevelHelp() {
       "  media list [--limit <n>] [--media-type <type>] [--since <iso>] [--until <iso>] [--days <n>] [--flat-metrics]",
       "  media get <mediaId>",
       "  media analyze [--days <n>]",
+      "  report generate [--days <n>] [--output <path>]",
       "  sync list [--limit <n>]",
       "  sync get <syncRunId>",
       "  sync run [--force] [--stale-after-hours <n>] [--wait]",
@@ -399,6 +401,32 @@ class InstagramInsightsCli {
       }
 
       fail("Unsupported sync action.", { action });
+    });
+  }
+
+  @command()
+  @commandOption("--days <n>", "Report window in days")
+  @commandOption("--output <path>", "Write the generated HTML report to this path")
+  async report(this: RootCommand, @requiredArg("action") action: string) {
+    await runHandled(async () => {
+      if (action !== "generate") {
+        fail("Unsupported report action.", { action });
+      }
+
+      const options = this as RootCommand & {
+        days?: string;
+        output?: string;
+      };
+      const days = parseOptionalInt(options.days, "days") ?? 30;
+      const client = new InstagramInsightsApiClient(getRootOptions(this).appUrl);
+
+      printJson(
+        await generateHtmlReport({
+          client,
+          days,
+          outputPath: options.output,
+        }),
+      );
     });
   }
 

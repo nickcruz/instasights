@@ -150,6 +150,30 @@ Right now this command only supports `--days 30`.
 
 Use it when you want the report-style summary rather than raw media rows.
 
+### `report generate [--days <n>] [--output <path>]`
+
+Generates a self-contained HTML dashboard for the trailing time window.
+
+Right now this command only supports `--days 30`.
+
+Flags:
+
+- `--days <n>`
+  Supports only `30` in the current implementation.
+- `--output <path>`
+  Writes the generated HTML report to the provided file path. If omitted, the CLI writes a deterministic `.html` filename into the current working directory.
+
+This command uses the existing precomputed report plus stored media analysis fields to build an interactive static dashboard with:
+
+- overview totals
+- a star-post callout
+- theme and hook breakdowns
+- an expandable all-posts table
+- keyword and hashtag sections
+- deterministic strategic insights
+
+Use it when you want a portable HTML report instead of raw JSON.
+
 ### `sync list [--limit <n>]`
 
 Lists recent sync runs for the authenticated user.
@@ -244,4 +268,11 @@ Use this when you want to refresh the managed binary without waiting for the nor
 ./instagram-insights sync run --force --wait
 ./instagram-insights snapshot latest
 ./instagram-insights media analyze --days 30
+```
+
+### Generate an HTML dashboard report
+
+```bash
+./instagram-insights report generate --days 30
+./instagram-insights report generate --days 30 --output ./output/instagram-insights-report.html
 ```
