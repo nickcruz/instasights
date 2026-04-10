@@ -9,8 +9,10 @@ Core rules:
 
 - Use the bundled CLI, not raw HTTP requests and not MCP tools.
 - Resolve paths relative to this skill folder.
+- Start from `./instagram-insights.mjs` so the wrapper can check for CLI updates before running commands.
 - The CLI stores OAuth tokens in `./.auth/state.json` inside this installed skill folder.
 - Data-returning commands already default to JSON output.
+- The installed skill auto-checks for CLI updates on startup and refreshes itself before continuing when a newer version is published.
 
 Preferred shortcut:
 
@@ -28,6 +30,14 @@ Fallback direct bin entrypoint:
 
 ```bash
 node ./bin/instagram-insights.mjs
+```
+
+Manual update commands:
+
+```bash
+./instagram-insights.mjs update check
+./instagram-insights.mjs update apply
+./instagram-insights.mjs update check --apply --force
 ```
 
 Recommended workflow:
@@ -61,3 +71,4 @@ Notes:
 - `clean-reset` keeps the CLI authenticated, but deletes the linked Instagram account plus synced backend media/sync state so setup returns to `not_linked`.
 - `setup status --open-link` can open the Instagram handoff automatically when the account is not linked.
 - `--app-url` can override the default production URL for local or staging testing.
+- `INSTAGRAM_INSIGHTS_DISABLE_AUTO_UPDATE=1` disables the startup update check when you need to troubleshoot a bad rollout.

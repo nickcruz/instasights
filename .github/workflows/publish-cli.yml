@@ -1,0 +1,165 @@
+name: Publish CLI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/cli/**"
+      - "skills/instagram-insights/**"
+      - ".plugin/**"
+      - ".claude-plugin/**"
+      - "scripts/set-cli-version.mjs"
+      - "scripts/generate-cli-update-manifest.mjs"
+      - ".github/workflows/publish-cli.yml"
+      - "package.json"
+      - "yarn.lock"
+  workflow_dispatch:
+    inputs:
+      notes:
+        description: Release notes shown by the updater
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish-cli:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+      RELEASES_BASE_URL: ${{ vars.INSTAGRAM_INSIGHTS_CLI_RELEASES_BASE_URL }}
+      RELEASES_BUCKET: ${{ vars.INSTAGRAM_INSIGHTS_CLI_RELEASES_BUCKET }}
+      RELEASES_PREFIX: ${{ vars.INSTAGRAM_INSIGHTS_CLI_RELEASES_PREFIX || 'cli' }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Derive next CLI version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          CURRENT_VERSION=$(node -p "require('./packages/cli/package.json').version")
+          export CURRENT_VERSION
+          export MANIFEST_URL="${RELEASES_BASE_URL%/}/${RELEASES_PREFIX}/latest.json"
+          NEXT_VERSION=$(node <<'NODE'
+          const endpoint = process.env.MANIFEST_URL;
+          const fallbackVersion = process.env.CURRENT_VERSION;
+
+          function incrementPatch(version) {
+            const parts = version.split(".").map((value) => Number.parseInt(value, 10));
+            if (parts.length !== 3 || parts.some((value) => Number.isNaN(value))) {
+              throw new Error(`Unsupported semver version: ${version}`);
+            }
+
+            parts[2] += 1;
+            return parts.join(".");
+          }
+
+          async function main() {
+            if (!endpoint) {
+              console.log(incrementPatch(fallbackVersion));
+              return;
+            }
+
+            try {
+              const response = await fetch(endpoint, { headers: { Accept: "application/json" } });
+              if (!response.ok) {
+                console.log(incrementPatch(fallbackVersion));
+                return;
+              }
+
+              const payload = await response.json();
+              if (typeof payload?.version !== "string" || payload.version.length === 0) {
+                console.log(incrementPatch(fallbackVersion));
+                return;
+              }
+
+              console.log(incrementPatch(payload.version));
+            } catch {
+              console.log(incrementPatch(fallbackVersion));
+            }
+          }
+
+          await main();
+          NODE
+          )
+
+          echo "current=${CURRENT_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "next=${NEXT_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "manifest_url=${MANIFEST_URL}" >> "$GITHUB_OUTPUT"
+
+      - name: Stamp CLI version
+        run: node ./scripts/set-cli-version.mjs --version "${{ steps.version.outputs.next }}"
+
+      - name: Build self-updating CLI bundle
+        env:
+          INSTAGRAM_INSIGHTS_UPDATE_MANIFEST_URL: ${{ steps.version.outputs.manifest_url }}
+        run: yarn build:cli
+
+      - name: Run CLI tests
+        run: |
+          yarn workspace @instagram-insights/cli typecheck
+          yarn workspace @instagram-insights/cli test
+
+      - name: Generate update manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          node ./scripts/generate-cli-update-manifest.mjs \
+            --version "${{ steps.version.outputs.next }}" \
+            --base-url "${RELEASES_BASE_URL%/}/${RELEASES_PREFIX}" \
+            --output "./latest.json" \
+            --notes "${{ github.event.inputs.notes }}" \
+            --published-at "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+      - name: Upload CLI artifacts to S3
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION="${{ steps.version.outputs.next }}"
+          VERSION_PREFIX="${RELEASES_PREFIX}/${VERSION}"
+
+          upload_file() {
+            local relative_path="$1"
+            local content_type="$2"
+            aws s3 cp "skills/instagram-insights/${relative_path}" "s3://${RELEASES_BUCKET}/${VERSION_PREFIX}/${relative_path}" \
+              --content-type "${content_type}" \
+              --cache-control "public, max-age=31536000, immutable"
+          }
+
+          upload_file "instagram-insights.mjs" "text/javascript; charset=utf-8"
+          upload_file "bin/instagram-insights.mjs" "text/javascript; charset=utf-8"
+          upload_file "bin/instagram-insights-updater.mjs" "text/javascript; charset=utf-8"
+          upload_file "bin/instagram-insights.version.json" "application/json; charset=utf-8"
+
+          aws s3 cp "./latest.json" "s3://${RELEASES_BUCKET}/${RELEASES_PREFIX}/latest.json" \
+            --content-type "application/json; charset=utf-8" \
+            --cache-control "no-store, no-cache, max-age=0, must-revalidate"
+
+          echo "Published CLI version: ${VERSION}"
+          echo "CLI manifest: ${RELEASES_BASE_URL%/}/${RELEASES_PREFIX}/latest.json"

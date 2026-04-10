@@ -72,3 +72,64 @@ export type SyncRunTriggerResponse =
       reusedExistingRun: false;
       syncRun: Record<string, unknown> | null;
     };
+
+export type InstalledVersionMetadata = {
+  version: string;
+  installedAt: string | null;
+};
+
+export type UpdateCheckCache = {
+  checkedAt: string;
+  localVersion: string | null;
+  remoteVersion: string;
+  updateAvailable: boolean;
+  manifestUrl: string;
+};
+
+export type RemoteUpdateFile = {
+  path: string;
+  url: string;
+  sha256: string;
+};
+
+export type RemoteUpdateManifest = {
+  version: string;
+  publishedAt: string;
+  notes: string;
+  files: RemoteUpdateFile[];
+};
+
+export type UpdateCheckStatus =
+  | "disabled"
+  | "cache"
+  | "current"
+  | "update-available"
+  | "network-error"
+  | "invalid-manifest";
+
+export type UpdateCheckResult = {
+  checkedAt: string;
+  status: UpdateCheckStatus;
+  manifestUrl: string | null;
+  embeddedVersion: string;
+  currentVersion: string;
+  localVersion: string | null;
+  remoteVersion: string | null;
+  legacyInstall: boolean;
+  updateAvailable: boolean;
+  notes: string;
+  fromCache: boolean;
+  manifest: RemoteUpdateManifest | null;
+  error: string | null;
+};
+
+export type UpdateApplyResult = {
+  applied: boolean;
+  previousVersion: string | null;
+  currentVersion: string;
+  manifestUrl: string | null;
+  remoteVersion: string | null;
+  legacyInstall: boolean;
+  notes: string;
+  reason?: string;
+};

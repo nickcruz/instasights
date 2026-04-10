@@ -14,9 +14,9 @@ Both now return `410 Gone`.
 Use the Instagram Insights skill and bundled CLI instead:
 
 ```bash
-node ./skills/instagram-insights/bin/instagram-insights.mjs auth login
-node ./skills/instagram-insights/bin/instagram-insights.mjs setup status
-node ./skills/instagram-insights/bin/instagram-insights.mjs sync run --wait
+./skills/instagram-insights/instagram-insights.mjs auth login
+./skills/instagram-insights/instagram-insights.mjs setup status
+./skills/instagram-insights/instagram-insights.mjs sync run --wait
 ```
 
 The CLI talks directly to `/api/v1/*` and authenticates through `/oauth/*`.

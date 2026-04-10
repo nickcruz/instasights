@@ -30,12 +30,12 @@ Add the repository as a Claude marketplace and install the skill package:
 /plugin install instagram-insights@kingscrosslabs-marketplace
 ```
 
-After install, the bundled skill should drive the CLI:
+After install, run the skill wrapper so it can self-update the bundled CLI before executing commands:
 
 ```bash
-node ./skills/instagram-insights/bin/instagram-insights.mjs auth login
-node ./skills/instagram-insights/bin/instagram-insights.mjs setup status
-node ./skills/instagram-insights/bin/instagram-insights.mjs sync run --wait
+./skills/instagram-insights/instagram-insights.mjs auth login
+./skills/instagram-insights/instagram-insights.mjs setup status
+./skills/instagram-insights/instagram-insights.mjs sync run --wait
 ```
 
 ## Supported CLI Commands
@@ -52,8 +52,23 @@ node ./skills/instagram-insights/bin/instagram-insights.mjs sync run --wait
 - `sync get <syncRunId>`
 - `sync run [--wait]`
 - `instagram link [--open]`
+- `update check [--apply] [--force]`
+- `update apply [--force]`
 
 All data-returning commands default to JSON output.
+
+## CLI Updates
+
+- The installed skill wrapper checks for the latest CLI release before running normal commands.
+- Published CLI bundles are versioned independently and store the installed version in `skills/instagram-insights/bin/instagram-insights.version.json`.
+- If the version file is missing, the updater treats the install as legacy and prefers the newest published release.
+- To inspect or force the updater manually, run:
+
+```bash
+./skills/instagram-insights/instagram-insights.mjs update check
+./skills/instagram-insights/instagram-insights.mjs update apply
+./skills/instagram-insights/instagram-insights.mjs update check --apply --force
+```
 
 ## Auth Model
 
