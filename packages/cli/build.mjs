@@ -16,6 +16,7 @@ const distDir = path.join(packageDir, "dist");
 const skillBinDir = path.join(projectRoot, "skills/instagram-insights/bin");
 const distOutfile = path.join(distDir, "index.mjs");
 const distUpdaterOutfile = path.join(distDir, "instagram-insights-updater.mjs");
+const distVersionFile = path.join(distDir, "instagram-insights.version.json");
 const skillOutfile = path.join(skillBinDir, "instagram-insights.mjs");
 const skillUpdaterOutfile = path.join(skillBinDir, "instagram-insights-updater.mjs");
 const skillVersionFile = path.join(skillBinDir, "instagram-insights.version.json");
@@ -66,15 +67,16 @@ await Promise.all([
   }),
 ]);
 
-await writeFile(
-  skillVersionFile,
-  `${JSON.stringify(
-    {
-      version: cliVersion,
-      installedAt: null,
-    },
-    null,
-    2,
-  )}\n`,
-  "utf8",
-);
+const versionMetadata = `${JSON.stringify(
+  {
+    version: cliVersion,
+    installedAt: null,
+  },
+  null,
+  2,
+)}\n`;
+
+await Promise.all([
+  writeFile(distVersionFile, versionMetadata, "utf8"),
+  writeFile(skillVersionFile, versionMetadata, "utf8"),
+]);

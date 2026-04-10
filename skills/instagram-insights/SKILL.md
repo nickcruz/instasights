@@ -9,10 +9,10 @@ Core rules:
 
 - Use the bundled CLI, not raw HTTP requests and not MCP tools.
 - Resolve paths relative to this skill folder.
-- Start from `./instagram-insights.mjs` so the wrapper can check for CLI updates before running commands.
+- Start from `./instagram-insights.mjs` so the wrapper can install the latest CLI runtime into `./bin/` before running commands.
 - The CLI stores OAuth tokens in `./.auth/state.json` inside this installed skill folder.
 - Data-returning commands already default to JSON output.
-- The installed skill auto-checks for CLI updates on startup and refreshes itself before continuing when a newer version is published.
+- The installed skill bootstraps the latest CLI runtime from S3 when `./bin/` is missing, then the downloaded CLI keeps itself updated.
 
 Preferred shortcut:
 
@@ -26,11 +26,13 @@ Invoke it from this skill folder. If you are in the repo root, use:
 ./skills/instagram-insights/instagram-insights.mjs
 ```
 
-Fallback direct bin entrypoint:
+Generated direct bin entrypoint:
 
 ```bash
 node ./bin/instagram-insights.mjs
 ```
+
+That entrypoint appears after the wrapper has installed the runtime or after a local `yarn build:cli`.
 
 Manual update commands:
 
@@ -72,3 +74,4 @@ Notes:
 - `setup status --open-link` can open the Instagram handoff automatically when the account is not linked.
 - `--app-url` can override the default production URL for local or staging testing.
 - `INSTAGRAM_INSIGHTS_DISABLE_AUTO_UPDATE=1` disables the startup update check when you need to troubleshoot a bad rollout.
+- If the skill is installed without a generated `./bin/` folder, set `INSTAGRAM_INSIGHTS_UPDATE_MANIFEST_URL` so the wrapper can bootstrap the latest CLI from S3 on first run.

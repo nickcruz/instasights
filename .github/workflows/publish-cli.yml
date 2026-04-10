@@ -145,17 +145,17 @@ jobs:
           VERSION_PREFIX="${RELEASES_PREFIX}/${VERSION}"
 
           upload_file() {
-            local relative_path="$1"
-            local content_type="$2"
-            aws s3 cp "skills/instagram-insights/${relative_path}" "s3://${RELEASES_BUCKET}/${VERSION_PREFIX}/${relative_path}" \
+            local source_path="$1"
+            local relative_path="$2"
+            local content_type="$3"
+            aws s3 cp "${source_path}" "s3://${RELEASES_BUCKET}/${VERSION_PREFIX}/${relative_path}" \
               --content-type "${content_type}" \
               --cache-control "public, max-age=31536000, immutable"
           }
 
-          upload_file "instagram-insights.mjs" "text/javascript; charset=utf-8"
-          upload_file "bin/instagram-insights.mjs" "text/javascript; charset=utf-8"
-          upload_file "bin/instagram-insights-updater.mjs" "text/javascript; charset=utf-8"
-          upload_file "bin/instagram-insights.version.json" "application/json; charset=utf-8"
+          upload_file "packages/cli/dist/index.mjs" "bin/instagram-insights.mjs" "text/javascript; charset=utf-8"
+          upload_file "packages/cli/dist/instagram-insights-updater.mjs" "bin/instagram-insights-updater.mjs" "text/javascript; charset=utf-8"
+          upload_file "packages/cli/dist/instagram-insights.version.json" "bin/instagram-insights.version.json" "application/json; charset=utf-8"
 
           aws s3 cp "./latest.json" "s3://${RELEASES_BUCKET}/${RELEASES_PREFIX}/latest.json" \
             --content-type "application/json; charset=utf-8" \

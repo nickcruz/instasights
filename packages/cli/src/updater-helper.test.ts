@@ -16,26 +16,36 @@ test("applyStagedUpdate copies managed files and preserves auth state", async ()
     await mkdir(path.join(stagingDir, "bin"), { recursive: true });
 
     await writeFile(path.join(skillRoot, ".auth", "state.json"), '{"token":"keep"}\n', "utf8");
-    await writeFile(path.join(stagingDir, "instagram-insights.mjs"), "new wrapper\n", "utf8");
     await writeFile(path.join(stagingDir, "bin", "instagram-insights.mjs"), "new cli\n", "utf8");
+    await writeFile(
+      path.join(stagingDir, "bin", "instagram-insights-updater.mjs"),
+      "new helper\n",
+      "utf8",
+    );
+    await writeFile(
+      path.join(stagingDir, "bin", "instagram-insights.version.json"),
+      '{ "version": "1.0.2", "installedAt": null }\n',
+      "utf8",
+    );
 
     await applyStagedUpdate({
       skillRoot,
       stagingDir,
       version: "1.0.2",
       files: [
-        { path: "instagram-insights.mjs" },
         { path: "bin/instagram-insights.mjs" },
+        { path: "bin/instagram-insights-updater.mjs" },
+        { path: "bin/instagram-insights.version.json" },
       ],
     });
 
     assert.equal(
-      await readFile(path.join(skillRoot, "instagram-insights.mjs"), "utf8"),
-      "new wrapper\n",
-    );
-    assert.equal(
       await readFile(path.join(skillRoot, "bin", "instagram-insights.mjs"), "utf8"),
       "new cli\n",
+    );
+    assert.equal(
+      await readFile(path.join(skillRoot, "bin", "instagram-insights-updater.mjs"), "utf8"),
+      "new helper\n",
     );
     assert.equal(
       await readFile(path.join(skillRoot, ".auth", "state.json"), "utf8"),

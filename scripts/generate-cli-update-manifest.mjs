@@ -3,10 +3,18 @@ import { readFile, writeFile } from "node:fs/promises";
 import { resolve, posix } from "node:path";
 
 const MANAGED_SKILL_FILES = [
-  "instagram-insights.mjs",
-  "bin/instagram-insights.mjs",
-  "bin/instagram-insights-updater.mjs",
-  "bin/instagram-insights.version.json",
+  {
+    artifactPath: "index.mjs",
+    remotePath: "bin/instagram-insights.mjs",
+  },
+  {
+    artifactPath: "instagram-insights-updater.mjs",
+    remotePath: "bin/instagram-insights-updater.mjs",
+  },
+  {
+    artifactPath: "instagram-insights.version.json",
+    remotePath: "bin/instagram-insights.version.json",
+  },
 ];
 
 function getArg(name) {
@@ -33,17 +41,17 @@ const baseUrl = getRequiredArg("base-url").replace(/\/+$/, "");
 const outputPath = resolve(getRequiredArg("output"));
 const notes = getArg("notes") ?? "";
 const publishedAt = getArg("published-at") ?? new Date().toISOString();
-const skillRoot = resolve(getArg("skill-root") ?? "skills/instagram-insights");
+const artifactRoot = resolve(getArg("artifact-root") ?? "packages/cli/dist");
 
 const files = await Promise.all(
-  MANAGED_SKILL_FILES.map(async (relativePath) => {
-    const absolutePath = resolve(skillRoot, relativePath);
+  MANAGED_SKILL_FILES.map(async ({ artifactPath, remotePath }) => {
+    const absolutePath = resolve(artifactRoot, artifactPath);
     const buffer = await readFile(absolutePath);
     const sha256 = crypto.createHash("sha256").update(buffer).digest("hex");
 
     return {
-      path: relativePath,
-      url: `${baseUrl}/${posix.join(version, relativePath)}`,
+      path: remotePath,
+      url: `${baseUrl}/${posix.join(version, remotePath)}`,
       sha256,
     };
   }),

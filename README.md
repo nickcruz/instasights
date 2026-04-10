@@ -30,7 +30,7 @@ Add the repository as a Claude marketplace and install the skill package:
 /plugin install instagram-insights@kingscrosslabs-marketplace
 ```
 
-After install, run the skill wrapper so it can self-update the bundled CLI before executing commands:
+After install, run the skill wrapper so it can bootstrap the latest CLI runtime into the skill before executing commands:
 
 ```bash
 ./skills/instagram-insights/instagram-insights.mjs auth login
@@ -59,7 +59,9 @@ All data-returning commands default to JSON output.
 
 ## CLI Updates
 
-- The installed skill wrapper checks for the latest CLI release before running normal commands.
+- The committed skill wrapper installs the CLI runtime into `skills/instagram-insights/bin/` on first run instead of relying on a checked-in built file.
+- If `bin/` is missing, the wrapper downloads the latest version from S3 through `INSTAGRAM_INSIGHTS_UPDATE_MANIFEST_URL`, or uses a local `yarn build:cli` output when you are developing in the repo.
+- After bootstrap, the downloaded CLI continues checking for newer releases through its normal self-update flow.
 - Published CLI bundles are versioned independently and store the installed version in `skills/instagram-insights/bin/instagram-insights.version.json`.
 - If the version file is missing, the updater treats the install as legacy and prefers the newest published release.
 - To inspect or force the updater manually, run:
@@ -115,7 +117,7 @@ yarn test:web
 python3 -m pytest services/transcriber/tests
 ```
 
-The CLI bundle written into the skill lives at:
+The generated CLI bundle written into the skill lives at:
 
 ```text
 skills/instagram-insights/bin/instagram-insights.mjs

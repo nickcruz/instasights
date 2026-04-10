@@ -12,7 +12,7 @@ Instagram Insights now installs as one skill with a bundled CLI.
 ## What happens during install
 
 1. Claude installs the Instagram Insights skill bundle.
-2. The skill exposes a stable wrapper at `./instagram-insights.mjs` that checks for CLI updates before calling `./bin/instagram-insights.mjs`.
+2. The skill exposes a stable wrapper at `./instagram-insights.mjs` that installs the latest CLI runtime into `./bin/` before calling `./bin/instagram-insights.mjs`.
 3. The CLI authenticates against the hosted OAuth endpoints under `/oauth/*`.
 4. The hosted app finishes Google sign-in in the browser and resumes the waiting localhost callback.
 5. The installed skill stores auth state in its own `.auth/state.json` file.
@@ -63,3 +63,5 @@ https://YOUR_APP_DOMAIN/developers
 ```
 
 That page includes status hints, CLI examples, and the legacy API-key path.
+
+If the installed skill does not already have a generated `./bin/` folder, set `INSTAGRAM_INSIGHTS_UPDATE_MANIFEST_URL` so the wrapper can fetch the latest CLI bundle from S3 on first run.
