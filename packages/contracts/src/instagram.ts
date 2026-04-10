@@ -55,6 +55,20 @@ export type AccountOverviewResponse = {
   latestSyncRun: InstagramSyncRunSummary | null;
 };
 
+export type CleanResetResponse = {
+  status: "not_linked";
+  account: null;
+  latestSyncRun: null;
+  reset: {
+    hadLinkedAccount: boolean;
+    deletedInstagramAccountId: string | null;
+    deletedAccounts: number;
+    deletedSyncRuns: number;
+    deletedSnapshots: number;
+    deletedMediaItems: number;
+  };
+};
+
 export type LatestSnapshot = {
   syncRunId: string;
   instagramAccountId: string;

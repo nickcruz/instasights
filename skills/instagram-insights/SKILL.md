@@ -44,6 +44,7 @@ Supported commands:
 - `./instagram-insights.mjs auth login`
 - `./instagram-insights.mjs auth status`
 - `./instagram-insights.mjs auth logout`
+- `./instagram-insights.mjs clean-reset`
 - `./instagram-insights.mjs setup status --stale-after-hours 12`
 - `./instagram-insights.mjs account overview`
 - `./instagram-insights.mjs snapshot latest`
@@ -57,5 +58,6 @@ Supported commands:
 Notes:
 
 - `auth login` opens the hosted OAuth flow and completes Google sign-in through the web app before returning to the CLI loopback callback.
+- `clean-reset` keeps the CLI authenticated, but deletes the linked Instagram account plus synced backend media/sync state so setup returns to `not_linked`.
 - `setup status --open-link` can open the Instagram handoff automatically when the account is not linked.
 - `--app-url` can override the default production URL for local or staging testing.

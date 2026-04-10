@@ -92,6 +92,7 @@ function printTopLevelHelp() {
       "  auth login [--port <n>]",
       "  auth status",
       "  auth logout",
+      "  clean-reset",
       "  setup status [--stale-after-hours <n>] [--open-link]",
       "  account overview",
       "  snapshot latest",
@@ -218,6 +219,14 @@ class InstagramInsightsCli {
       }
 
       printJson(setupStatus);
+    });
+  }
+
+  @command()
+  async ["clean-reset"](this: RootCommand) {
+    await runHandled(async () => {
+      const client = new InstagramInsightsApiClient(getRootOptions(this).appUrl);
+      printJson(await client.cleanReset());
     });
   }
 

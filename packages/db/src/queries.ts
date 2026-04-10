@@ -1115,6 +1115,85 @@ export async function getAccountOverviewByUserId(
   };
 }
 
+export async function cleanResetInstagramStateByUserId(userId: string) {
+  const db = getDb();
+
+  return await db.transaction(async (tx) => {
+    const linkedAccount =
+      (
+        await tx
+          .select()
+          .from(instagramAccounts)
+          .where(eq(instagramAccounts.userId, userId))
+          .limit(1)
+      )[0] ?? null;
+
+    const mediaCountRow =
+      (
+        await tx
+          .select({
+            count: sql<number>`count(*)::int`,
+          })
+          .from(instagramMediaItems)
+          .where(eq(instagramMediaItems.userId, userId))
+      )[0] ?? { count: 0 };
+
+    const syncRunCountRow =
+      (
+        await tx
+          .select({
+            count: sql<number>`count(*)::int`,
+          })
+          .from(instagramSyncRuns)
+          .where(eq(instagramSyncRuns.userId, userId))
+      )[0] ?? { count: 0 };
+
+    const snapshotCountRow =
+      (
+        await tx
+          .select({
+            count: sql<number>`count(*)::int`,
+          })
+          .from(instagramAccountSnapshots)
+          .innerJoin(
+            instagramSyncRuns,
+            eq(instagramSyncRuns.id, instagramAccountSnapshots.syncRunId),
+          )
+          .where(eq(instagramSyncRuns.userId, userId))
+      )[0] ?? { count: 0 };
+
+    const deletedMediaItems = await tx
+      .delete(instagramMediaItems)
+      .where(eq(instagramMediaItems.userId, userId))
+      .returning({ rowId: instagramMediaItems.rowId });
+
+    const deletedSyncRuns = await tx
+      .delete(instagramSyncRuns)
+      .where(eq(instagramSyncRuns.userId, userId))
+      .returning({ id: instagramSyncRuns.id });
+
+    const deletedAccounts = await tx
+      .delete(instagramAccounts)
+      .where(eq(instagramAccounts.userId, userId))
+      .returning({ id: instagramAccounts.id });
+
+    return {
+      status: "not_linked" as const,
+      account: null,
+      latestSyncRun: null,
+      reset: {
+        hadLinkedAccount: linkedAccount !== null,
+        deletedInstagramAccountId:
+          linkedAccount?.id ?? deletedAccounts[0]?.id ?? null,
+        deletedAccounts: deletedAccounts.length,
+        deletedSyncRuns: deletedSyncRuns.length || syncRunCountRow.count,
+        deletedSnapshots: snapshotCountRow.count,
+        deletedMediaItems: deletedMediaItems.length || mediaCountRow.count,
+      },
+    };
+  });
+}
+
 export async function getLatestSnapshotByUserId(
   userId: string,
 ): Promise<LatestSnapshotResponse> {

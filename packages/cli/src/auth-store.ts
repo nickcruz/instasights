@@ -67,17 +67,9 @@ export async function writeAuthState(state: StoredAuthState) {
 }
 
 export async function clearAuthTokens() {
-  const state = await readAuthState();
-
-  await writeAuthState({
-    ...state,
-    accessToken: null,
-    refreshToken: null,
-    expiresAt: null,
-  });
+  await rm(resolveAuthDir(), { recursive: true, force: true });
 }
 
 export async function deleteAuthState() {
   await rm(resolveAuthStatePath(), { force: true });
 }
-

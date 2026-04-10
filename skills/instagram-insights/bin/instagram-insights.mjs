@@ -88,13 +88,7 @@ async function writeAuthState(state) {
   await chmod(target, 384).catch(() => void 0);
 }
 async function clearAuthTokens() {
-  const state = await readAuthState();
-  await writeAuthState({
-    ...state,
-    accessToken: null,
-    refreshToken: null,
-    expiresAt: null
-  });
+  await rm(resolveAuthDir(), { recursive: true, force: true });
 }
 
 // src/browser.ts
@@ -405,6 +399,14 @@ var InstagramInsightsApiClient = class {
   getAccountOverview() {
     return this.requestJson("/api/v1/account");
   }
+  cleanReset() {
+    return this.requestJson(
+      "/api/v1/account/clean-reset",
+      {
+        method: "POST"
+      }
+    );
+  }
   getLatestSnapshot() {
     return this.requestJson("/api/v1/snapshot/latest");
   }
@@ -589,6 +591,7 @@ function printTopLevelHelp() {
       "  auth login [--port <n>]",
       "  auth status",
       "  auth logout",
+      "  clean-reset",
       "  setup status [--stale-after-hours <n>] [--open-link]",
       "  account overview",
       "  snapshot latest",
@@ -681,6 +684,12 @@ var InstagramInsightsCli = class {
         await openBrowser(setupStatus.instagramLinkUrl);
       }
       printJson(setupStatus);
+    });
+  }
+  async ["clean-reset"]() {
+    await runHandled(async () => {
+      const client = new InstagramInsightsApiClient(getRootOptions(this).appUrl);
+      printJson(await client.cleanReset());
     });
   }
   async account(action) {
@@ -815,6 +824,9 @@ __decorateClass([
   commandOption("--open-link", "Open the Instagram linking handoff when status is not_linked"),
   __decorateParam(0, requiredArg("action"))
 ], InstagramInsightsCli.prototype, "setup", 1);
+__decorateClass([
+  command()
+], InstagramInsightsCli.prototype, "clean-reset", 1);
 __decorateClass([
   command(),
   __decorateParam(0, requiredArg("action"))

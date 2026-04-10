@@ -7,6 +7,7 @@ import { fail } from "./output";
 import { normalizeAppUrl, refreshAccessToken } from "./oauth";
 import type {
   AccountOverviewResponse,
+  CleanResetResponse,
   LatestSnapshotResponse,
   MediaDetailResponse,
   MediaListResponse,
@@ -131,6 +132,15 @@ export class InstagramInsightsApiClient {
     return this.requestJson<AccountOverviewResponse>("/api/v1/account");
   }
 
+  cleanReset() {
+    return this.requestJson<CleanResetResponse>(
+      "/api/v1/account/clean-reset",
+      {
+        method: "POST",
+      },
+    );
+  }
+
   getLatestSnapshot() {
     return this.requestJson<LatestSnapshotResponse>("/api/v1/snapshot/latest");
   }
@@ -165,4 +175,3 @@ export class InstagramInsightsApiClient {
     );
   }
 }
-
