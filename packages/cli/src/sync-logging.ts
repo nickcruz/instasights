@@ -1,6 +1,7 @@
 import type {
   InstagramSyncRunDetail,
   InstagramSyncRunSummary,
+  SyncRunTriggerResponse,
   SyncRunDetailResponse,
 } from "./types";
 
@@ -189,6 +190,18 @@ export function logSyncRunQueued(input: {
       );
     }
   }
+}
+
+export function resolveWaitableSyncRunId(result: SyncRunTriggerResponse) {
+  if (result.queuedNewRun) {
+    return result.syncRunId;
+  }
+
+  if (!("syncRun" in result) || !result.syncRun) {
+    return null;
+  }
+
+  return ["queued", "running"].includes(result.syncRun.status) ? result.syncRun.id : null;
 }
 
 export async function waitForSyncRun(input: {

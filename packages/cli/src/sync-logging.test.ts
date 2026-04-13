@@ -5,6 +5,7 @@ import type { SyncRunDetailResponse } from "./types";
 import {
   formatDurationEstimate,
   logSyncRunQueued,
+  resolveWaitableSyncRunId,
   waitForSyncRun,
 } from "./sync-logging";
 
@@ -160,4 +161,34 @@ test("logSyncRunQueued emits JSON log lines", () => {
   });
   assert.equal(JSON.parse(capture.stderr[1]).event, "runtime_log");
   assert.match(JSON.parse(capture.stderr[1]).message, /about 1m 30s/);
+});
+
+test("resolveWaitableSyncRunId attaches to queued or running existing runs", () => {
+  assert.equal(
+    resolveWaitableSyncRunId({
+      queuedNewRun: false,
+      reusedExistingRun: true,
+      reason: "A sync is already in progress.",
+      syncRun: buildDetail({
+        status: "running",
+        currentStep: "media-catalog",
+        progressPercent: 32,
+      }).syncRun!,
+    }),
+    "sync_123",
+  );
+
+  assert.equal(
+    resolveWaitableSyncRunId({
+      queuedNewRun: false,
+      reusedExistingRun: false,
+      reason: "Data is already fresh.",
+      syncRun: buildDetail({
+        status: "completed",
+        currentStep: "complete",
+        progressPercent: 100,
+      }).syncRun!,
+    }),
+    null,
+  );
 });
