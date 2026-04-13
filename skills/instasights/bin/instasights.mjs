@@ -6912,7 +6912,7 @@ function logSyncRunQueued(input) {
   }
 }
 async function waitForSyncRun(input) {
-  const pollIntervalMs = input.pollIntervalMs ?? 2e3;
+  const pollIntervalMs = input.pollIntervalMs ?? 1e3;
   const heartbeatIntervalMs = input.heartbeatIntervalMs ?? 1e4;
   const sleep = input.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
   let previousSnapshot = null;
@@ -6921,6 +6921,7 @@ async function waitForSyncRun(input) {
     const detail = await input.client.getSyncRun(input.syncRunId);
     const syncRun = detail.syncRun;
     const status = syncRun?.status;
+    await input.onPoll?.(detail);
     if (syncRun) {
       const nextSnapshot = buildSyncProgressSnapshot(syncRun);
       if (hasMeaningfulSyncProgressChange(previousSnapshot, nextSnapshot)) {
@@ -7267,14 +7268,16 @@ var InstasightsCli = class {
             return;
           }
           logRuntime(
-            "Polling sync status every 2 seconds. If nothing changes for 10 seconds, the CLI will emit a heartbeat update."
+            "Polling sync status every 1 second and printing full sync status updates until the run completes."
           );
-          printJson(
-            await waitForSyncRun({
-              client,
-              syncRunId: queuedId
-            })
-          );
+          await waitForSyncRun({
+            client,
+            syncRunId: queuedId,
+            pollIntervalMs: 1e3,
+            onPoll: (detail) => {
+              printJson(detail);
+            }
+          });
           return;
         }
         printJson(result);

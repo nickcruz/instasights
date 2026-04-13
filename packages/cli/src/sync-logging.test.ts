@@ -68,6 +68,7 @@ test("waitForSyncRun logs meaningful sync progress changes and heartbeats", asyn
   const capture = captureStderr();
   const originalNow = Date.now;
   let now = 0;
+  const polledStatuses: string[] = [];
   Date.now = () => {
     now += 2;
     return now;
@@ -111,6 +112,9 @@ test("waitForSyncRun logs meaningful sync progress changes and heartbeats", asyn
       syncRunId: "sync_123",
       pollIntervalMs: 0,
       heartbeatIntervalMs: 1,
+      onPoll: async (detail) => {
+        polledStatuses.push(detail.syncRun?.status ?? "missing");
+      },
       sleep: async () => undefined,
     });
 
@@ -121,6 +125,7 @@ test("waitForSyncRun logs meaningful sync progress changes and heartbeats", asyn
   }
 
   assert.equal(capture.stderr.length, 4);
+  assert.deepEqual(polledStatuses, ["queued", "running", "running", "completed"]);
   assert.equal(JSON.parse(capture.stderr[0]).event, "runtime_log");
   assert.match(JSON.parse(capture.stderr[0]).message, /is queued during queueing/);
   assert.match(JSON.parse(capture.stderr[1]).message, /fetching media catalog/);

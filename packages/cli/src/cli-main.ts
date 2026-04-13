@@ -468,14 +468,16 @@ class InstasightsCli {
           }
 
           logRuntime(
-            "Polling sync status every 2 seconds. If nothing changes for 10 seconds, the CLI will emit a heartbeat update.",
+            "Polling sync status every 1 second and printing full sync status updates until the run completes.",
           );
-          printJson(
-            await waitForSyncRun({
-              client,
-              syncRunId: queuedId,
-            }),
-          );
+          await waitForSyncRun({
+            client,
+            syncRunId: queuedId,
+            pollIntervalMs: 1_000,
+            onPoll: (detail) => {
+              printJson(detail);
+            },
+          });
           return;
         }
 
