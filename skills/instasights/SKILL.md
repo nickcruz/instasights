@@ -5,9 +5,18 @@ description: Use the bundled Node-based Instasights CLI to authenticate with Goo
 
 Use this skill whenever the user wants to work with Instasights data.
 
-For a deeper command-by-command reference, see [CLI.md](/Users/nickcruz/repos/instasights/skills/instasights/CLI.md).
+### Quickstart
 
-Core rules:
+1. Run `./instasights auth status`.
+2. If not authenticated, run `./instasights auth login`.
+3. Run `./instasights setup status`.
+4. If setup reports `not_linked`, run `./instasights instagram link --open`.
+5. If setup reports `not_synced` or `stale`, run `./instasights sync run --wait`.
+6. Use `./instasights media analyze --days 30` for the precomputed 30-day JSON report.
+7. Use `./instasights report generate --days 30` when you want a self-contained HTML dashboard export.
+8. Use `account overview`, `snapshot latest`, `media list`, `media get`, `sync list`, and `sync get` for debugging.
+
+### Core Rules
 
 - Use the bundled CLI, not raw HTTP requests and not MCP tools.
 - Target: Node.js 20 or newer.
@@ -47,18 +56,7 @@ Manual update commands
 ./instasights update check --apply --force
 ```
 
-### Recommended workflow
-
-1. Run `./instasights auth status`.
-2. If not authenticated, run `./instasights auth login`.
-3. Run `./instasights setup status`.
-4. If setup reports `not_linked`, run `./instasights instagram link --open`.
-5. If setup reports `not_synced` or `stale`, run `./instasights sync run --wait`.
-6. Use `./instasights media analyze --days 30` for the precomputed 30-day JSON report.
-7. Use `./instasights report generate --days 30` when you want a self-contained HTML dashboard export.
-8. Use `account overview`, `snapshot latest`, `media list`, `media get`, `sync list`, and `sync get` for debugging.
-
-### Supported commands
+### Reference: Supported commands
 
 - `./instasights auth login`
 - `./instasights auth status`
@@ -76,6 +74,8 @@ Manual update commands
 - `./instasights sync get <syncRunId>`
 - `./instasights sync run --wait`
 - `./instasights instagram link --open`
+
+For a deeper command-by-command reference, see [CLI.md](/Users/nickcruz/repos/instasights/skills/instasights/CLI.md).
 
 Notes:
 
