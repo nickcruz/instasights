@@ -27,18 +27,12 @@ permissions:
 
 jobs:
   publish-cli:
-    runs-on: macos-14
+    runs-on: ubuntu-latest
     env:
       AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
       RELEASES_BASE_URL: ${{ vars.INSTASIGHTS_CLI_RELEASES_BASE_URL }}
       RELEASES_BUCKET: ${{ vars.INSTASIGHTS_CLI_RELEASES_BUCKET }}
       RELEASES_PREFIX: ${{ vars.INSTASIGHTS_CLI_RELEASES_PREFIX || 'cli' }}
-      APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-      APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
-      APPLE_API_KEY_CONTENT: ${{ secrets.APPLE_API_KEY_CONTENT }}
-      APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-      KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -126,80 +120,6 @@ jobs:
           yarn workspace @instasights/cli typecheck
           yarn workspace @instasights/cli test
 
-      - name: Import Apple Developer ID certificate
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          CERT_PATH="${RUNNER_TEMP}/developer-id.p12"
-          KEYCHAIN_PATH="${RUNNER_TEMP}/build.keychain-db"
-
-          printf '%s' "${APPLE_CERTIFICATE}" | base64 --decode > "${CERT_PATH}"
-
-          security create-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_PATH}"
-          security default-keychain -s "${KEYCHAIN_PATH}"
-          security unlock-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_PATH}"
-          security set-keychain-settings -lut 21600 "${KEYCHAIN_PATH}"
-          security import "${CERT_PATH}" -k "${KEYCHAIN_PATH}" -P "${APPLE_CERTIFICATE_PASSWORD}" -T /usr/bin/codesign -T /usr/bin/security
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_PATH}"
-          security find-identity -v -p codesigning "${KEYCHAIN_PATH}"
-
-          SIGNING_IDENTITY=$(
-            security find-identity -v -p codesigning "${KEYCHAIN_PATH}" \
-              | grep "Developer ID Application" \
-              | head -n 1 \
-              | awk -F '"' '{ print $2 }'
-          )
-
-          if [[ -z "${SIGNING_IDENTITY}" ]]; then
-            echo "Could not find a Developer ID Application signing identity in the temporary keychain." >&2
-            exit 1
-          fi
-
-          echo "INSTASIGHTS_APPLE_SIGNING_IDENTITY=${SIGNING_IDENTITY}" >> "${GITHUB_ENV}"
-
-      - name: Prepare App Store Connect API key
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          API_KEY_PATH="${RUNNER_TEMP}/AuthKey_${APPLE_API_KEY}.p8"
-          printf '%s' "${APPLE_API_KEY_CONTENT}" > "${API_KEY_PATH}"
-          chmod 600 "${API_KEY_PATH}"
-
-          echo "APPLE_API_KEY_PATH=${API_KEY_PATH}" >> "${GITHUB_ENV}"
-
-      - name: Build signed macOS CLI binaries
-        run: yarn package:cli:macos
-
-      - name: Verify signed macOS CLI binaries
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          CLI_BIN="packages/cli/dist/macos-arm64/bin/instasights"
-          UPDATER_BIN="packages/cli/dist/macos-arm64/bin/instasights-updater"
-
-          codesign --verify --verbose=2 "${CLI_BIN}"
-          codesign --verify --verbose=2 "${UPDATER_BIN}"
-
-      - name: Create notarized manual archive
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          MANUAL_ROOT="packages/cli/dist/macos-arm64/manual"
-          ZIP_PATH="packages/cli/dist/macos-arm64/instasights-macos-arm64.zip"
-
-          rm -f "${ZIP_PATH}"
-          ditto -c -k --keepParent "${MANUAL_ROOT}/instasights" "${ZIP_PATH}"
-
-          xcrun notarytool submit "${ZIP_PATH}" \
-            --key "${APPLE_API_KEY_PATH}" \
-            --key-id "${APPLE_API_KEY}" \
-            --issuer "${APPLE_API_ISSUER}" \
-            --wait
-
       - name: Generate update manifest
         shell: bash
         run: |
@@ -208,7 +128,7 @@ jobs:
           node ./scripts/generate-cli-update-manifest.mjs \
             --version "${{ steps.version.outputs.next }}" \
             --base-url "${RELEASES_BASE_URL%/}/${RELEASES_PREFIX}" \
-            --artifact-root "packages/cli/dist/macos-arm64/bin" \
+            --artifact-root "packages/cli/dist" \
             --output "./latest.json" \
             --notes "${{ github.event.inputs.notes }}" \
             --published-at "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
@@ -230,10 +150,9 @@ jobs:
               --cache-control "public, max-age=31536000, immutable"
           }
 
-          upload_file "packages/cli/dist/macos-arm64/bin/instasights" "bin/instasights" "application/octet-stream"
-          upload_file "packages/cli/dist/macos-arm64/bin/instasights-updater" "bin/instasights-updater" "application/octet-stream"
-          upload_file "packages/cli/dist/macos-arm64/bin/instasights.version.json" "bin/instasights.version.json" "application/json; charset=utf-8"
-          upload_file "packages/cli/dist/macos-arm64/instasights-macos-arm64.zip" "manual/instasights-macos-arm64.zip" "application/zip"
+          upload_file "packages/cli/dist/instasights.mjs" "bin/instasights.mjs" "application/javascript; charset=utf-8"
+          upload_file "packages/cli/dist/instasights-updater.mjs" "bin/instasights-updater.mjs" "application/javascript; charset=utf-8"
+          upload_file "packages/cli/dist/instasights.version.json" "bin/instasights.version.json" "application/json; charset=utf-8"
 
           aws s3 cp "./latest.json" "s3://${RELEASES_BUCKET}/${RELEASES_PREFIX}/latest.json" \
             --content-type "application/json; charset=utf-8" \
