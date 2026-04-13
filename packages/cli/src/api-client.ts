@@ -75,7 +75,7 @@ export class InstasightsApiClient {
     const state = await this.refreshIfNeeded(await this.getAuthState());
 
     if (!state.accessToken) {
-      fail("Authentication required. Run `instagram auth login` first.", {
+      fail("Authentication required. Run `instasights auth login` first.", {
         appUrl: this.appUrl,
         scope: API_BEARER_SCOPE,
       });

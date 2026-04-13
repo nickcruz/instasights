@@ -3290,6 +3290,43 @@ var API_BEARER_SCOPE = "instasights:api";
 var EMBEDDED_CLI_VERSION = true ? "1.0.0" : process.env.INSTASIGHTS_EMBEDDED_VERSION ?? "1.0.0";
 var EMBEDDED_UPDATE_MANIFEST_URL = true ? "https://project-qah0p.vercel.app/api/cli/latest" : process.env.INSTASIGHTS_EMBEDDED_UPDATE_MANIFEST_URL ?? DEFAULT_UPDATE_MANIFEST_URL2;
 
+// src/output.ts
+function printJsonLine(data) {
+  console.error(JSON.stringify(data));
+}
+function printJson(data) {
+  console.log(JSON.stringify(data, null, 2));
+}
+function printText(text) {
+  console.log(text);
+}
+function logRuntime(message, details) {
+  printJsonLine({
+    event: "runtime_log",
+    message,
+    ...details ?? {}
+  });
+}
+async function runWithRuntimeLogging(message, task) {
+  logRuntime(`${message}...`);
+  try {
+    const result = await task();
+    logRuntime(`${message} complete.`);
+    return result;
+  } catch (error) {
+    logRuntime(`${message} failed.`);
+    throw error;
+  }
+}
+function fail(message, details) {
+  printJsonLine({
+    event: "error",
+    error: message,
+    ...details ?? {}
+  });
+  process.exit(1);
+}
+
 // src/auth-store.ts
 import { existsSync } from "node:fs";
 import { chmod, mkdir, readFile, rm, writeFile } from "node:fs/promises";
@@ -3487,7 +3524,7 @@ function getCliVersion() {
 
 // src/updater.ts
 function logUpdate(message) {
-  console.error(`[instasights:update] ${message}`);
+  logRuntime(`update: ${message}`);
 }
 function parseSemver(version2) {
   const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(version2.trim());
@@ -3784,7 +3821,7 @@ async function applyUpdate(checkResult, options) {
       reason: "Already running the latest available version."
     };
   }
-  const stagingDir = await mkdtemp(path3.join(os.tmpdir(), "instagram-update-"));
+  const stagingDir = await mkdtemp(path3.join(os.tmpdir(), "instasights-update-"));
   const payloadPath = path3.join(stagingDir, "update-payload.json");
   try {
     logUpdate(
@@ -3879,22 +3916,6 @@ async function openBrowser(url) {
   spawn2("xdg-open", [url], { detached: true, stdio: "ignore" }).unref();
 }
 
-// src/output.ts
-function printJson(data) {
-  console.log(JSON.stringify(data, null, 2));
-}
-function printText(text) {
-  console.log(text);
-}
-function fail(message, details) {
-  const payload = {
-    error: message,
-    ...details ?? {}
-  };
-  console.error(JSON.stringify(payload, null, 2));
-  process.exit(1);
-}
-
 // src/oauth.ts
 import crypto3 from "node:crypto";
 import http from "node:http";
@@ -3911,6 +3932,10 @@ function buildLoopbackRedirectUri(port = DEFAULT_CALLBACK_PORT) {
   return `http://127.0.0.1:${port}/callback`;
 }
 async function registerPublicClient(input) {
+  logRuntime("Registering the CLI OAuth client with the hosted app...", {
+    appUrl: input.appUrl,
+    redirectUri: input.redirectUri
+  });
   const response = await fetch(`${normalizeAppUrl(input.appUrl)}/oauth/register`, {
     method: "POST",
     headers: {
@@ -3936,6 +3961,7 @@ async function registerPublicClient(input) {
   return payload;
 }
 async function exchangeAuthorizationCode(input) {
+  logRuntime("Exchanging the OAuth authorization code for API tokens...");
   const formData = new URLSearchParams({
     grant_type: "authorization_code",
     client_id: input.clientId,
@@ -3958,6 +3984,7 @@ async function exchangeAuthorizationCode(input) {
   return payload;
 }
 async function refreshAccessToken(input) {
+  logRuntime("Requesting a refreshed OAuth access token...");
   const formData = new URLSearchParams({
     grant_type: "refresh_token",
     client_id: input.clientId,
@@ -3982,6 +4009,10 @@ async function waitForCallback(input) {
   const port = Number.parseInt(redirectUrl.port, 10);
   const hostname = redirectUrl.hostname;
   return await new Promise((resolve, reject) => {
+    logRuntime("Waiting for the browser OAuth callback on the local loopback server...", {
+      redirectUri: input.redirectUri,
+      timeoutMinutes: 10
+    });
     const timeout = setTimeout(() => {
       server.close(() => void 0);
       reject(new Error("Timed out waiting for OAuth callback."));
@@ -4034,6 +4065,9 @@ async function runBrowserOAuthLogin(input) {
   const appUrl = normalizeAppUrl(input.appUrl);
   const redirectUri = input.currentState.redirectUri && !input.port ? input.currentState.redirectUri : buildLoopbackRedirectUri(input.port ?? DEFAULT_CALLBACK_PORT);
   const registration = input.currentState.clientId && input.currentState.redirectUri === redirectUri && normalizeAppUrl(input.currentState.appUrl) === appUrl ? { client_id: input.currentState.clientId } : await registerPublicClient({ appUrl, redirectUri });
+  if (registration.client_id === input.currentState.clientId) {
+    logRuntime("Reusing the existing CLI OAuth client registration.");
+  }
   const codeVerifier = randomBase64Url(48);
   const codeChallenge = sha256Base64Url(codeVerifier);
   const state = randomBase64Url(24);
@@ -4046,12 +4080,18 @@ async function runBrowserOAuthLogin(input) {
   authorizeUrl.searchParams.set("code_challenge_method", "S256");
   authorizeUrl.searchParams.set("state", state);
   if (input.browser) {
+    logRuntime("Opening the OAuth authorization page in the browser.");
     await openBrowser(authorizeUrl.toString());
+  } else {
+    logRuntime("Browser launch is disabled; use this URL to continue the OAuth flow.", {
+      authorizeUrl: authorizeUrl.toString()
+    });
   }
   const callback = await waitForCallback({
     redirectUri,
     expectedState: state
   });
+  logRuntime("OAuth callback received; finalizing login.");
   if (callback.error) {
     fail("OAuth authorize step failed.", {
       appUrl,
@@ -4106,6 +4146,7 @@ var InstasightsApiClient = class {
     if (!state.clientId || !state.refreshToken || !state.accessToken || !isExpired(state.expiresAt)) {
       return state;
     }
+    logRuntime("Refreshing OAuth access token...");
     const tokens = await refreshAccessToken({
       appUrl: this.appUrl,
       clientId: state.clientId,
@@ -4124,7 +4165,7 @@ var InstasightsApiClient = class {
   async requireAuthenticatedState() {
     const state = await this.refreshIfNeeded(await this.getAuthState());
     if (!state.accessToken) {
-      fail("Authentication required. Run `instagram auth login` first.", {
+      fail("Authentication required. Run `instasights auth login` first.", {
         appUrl: this.appUrl,
         scope: API_BEARER_SCOPE
       });
@@ -4133,6 +4174,10 @@ var InstasightsApiClient = class {
   }
   async requestJson(path5, init, allowRetry = true) {
     const state = await this.requireAuthenticatedState();
+    const method = (init?.method ?? "GET").toUpperCase();
+    logRuntime(`Calling Instagram Insights API: ${method} ${path5}`, {
+      appUrl: this.appUrl
+    });
     const response = await fetch(`${this.appUrl}${path5}`, {
       ...init,
       headers: {
@@ -4142,6 +4187,7 @@ var InstasightsApiClient = class {
       }
     });
     if (response.status === 401 && allowRetry && state.refreshToken && state.clientId) {
+      logRuntime(`Received 401 for ${method} ${path5}; retrying after token refresh.`);
       const refreshed = await this.refreshIfNeeded({
         ...state,
         expiresAt: (/* @__PURE__ */ new Date(0)).toISOString()
@@ -4163,6 +4209,7 @@ var InstasightsApiClient = class {
         response: payload
       });
     }
+    logRuntime(`Instagram Insights API completed: ${method} ${path5} -> ${response.status}`);
     return payload;
   }
   getAccountOverview() {
@@ -6468,12 +6515,12 @@ function assertSupportedReportDays(days) {
 function getReadyReport(response) {
   if (response.status === "not_linked") {
     throw new Error(
-      "No linked Instagram account found. Run `instagram instagram link --open` first."
+      "No linked Instagram account found. Run `instasights instagram link --open` first."
     );
   }
   if (response.status === "not_synced" || !response.report) {
     throw new Error(
-      "No synced analysis report is available. Run `instagram sync run --wait` first."
+      "No synced analysis report is available. Run `instasights sync run --wait` first."
     );
   }
   return response.report;
@@ -6481,7 +6528,12 @@ function getReadyReport(response) {
 async function listAllReportMedia(input) {
   const items = /* @__PURE__ */ new Map();
   let cursor = null;
+  let page = 1;
   while (true) {
+    logRuntime("Fetching report media page...", {
+      page,
+      cursor
+    });
     const searchParams = buildMediaListSearchParams({
       limit: input.limit ?? 100,
       since: input.since,
@@ -6499,6 +6551,7 @@ async function listAllReportMedia(input) {
       break;
     }
     cursor = response.nextCursor;
+    page += 1;
   }
   return [...items.values()];
 }
@@ -6511,8 +6564,11 @@ function buildDefaultReportOutputPath(input) {
 async function generateHtmlReport(input) {
   const days = input.days ?? 30;
   assertSupportedReportDays(days);
+  logRuntime("Generating the HTML report...", { days });
+  logRuntime("Fetching the precomputed analysis report payload...");
   const reportResponse = await input.client.getReport(days);
   const report = getReadyReport(reportResponse);
+  logRuntime("Fetching media needed to enrich the HTML report...");
   const mediaItems = await listAllReportMedia({
     client: input.client,
     since: report.window.since,
@@ -6523,12 +6579,18 @@ async function generateHtmlReport(input) {
     report,
     mediaItems
   });
+  logRuntime("Rendering report HTML in memory...", {
+    postCount: model.posts.length
+  });
   const html = renderReportHtml(model);
   const resolvedOutputPath = input.outputPath ? path4.resolve(input.cwd ?? process.cwd(), input.outputPath) : buildDefaultReportOutputPath({
     cwd: input.cwd,
     username: model.username,
     generatedAt: report.generatedAt,
     days
+  });
+  logRuntime("Writing the HTML report to disk...", {
+    outputPath: resolvedOutputPath
   });
   await mkdir4(path4.dirname(resolvedOutputPath), { recursive: true });
   await writeFile4(resolvedOutputPath, `${html}
@@ -6539,6 +6601,88 @@ async function generateHtmlReport(input) {
     username: model.username,
     generatedAt: report.generatedAt,
     postCount: model.posts.length
+  };
+}
+
+// src/report-pagination.ts
+function buildPaginationSummary(totalItems, page, pageSize) {
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const normalizedPage = Math.min(Math.max(1, page), totalPages);
+  const startIndex = totalItems === 0 ? 0 : (normalizedPage - 1) * pageSize;
+  const endIndex = totalItems === 0 ? 0 : Math.min(startIndex + pageSize, totalItems);
+  return {
+    page: normalizedPage,
+    pageSize,
+    totalItems,
+    totalPages,
+    hasNextPage: normalizedPage < totalPages,
+    hasPreviousPage: normalizedPage > 1,
+    nextPage: normalizedPage < totalPages ? normalizedPage + 1 : null,
+    previousPage: normalizedPage > 1 ? normalizedPage - 1 : null,
+    startIndex,
+    endIndex
+  };
+}
+function paginateList(items, page, pageSize) {
+  const pagination = buildPaginationSummary(items.length, page, pageSize);
+  return {
+    items: items.slice(pagination.startIndex, pagination.endIndex),
+    pagination
+  };
+}
+function paginateReportResponse(response, page, pageSize) {
+  if (!response.report) {
+    return {
+      ...response,
+      pagination: {
+        posts: buildPaginationSummary(0, page, pageSize),
+        hashtags: buildPaginationSummary(0, page, pageSize),
+        themeAverages: buildPaginationSummary(0, page, pageSize),
+        topPostsByMetric: {}
+      }
+    };
+  }
+  const paginatedPosts = paginateList(response.report.posts, page, pageSize);
+  const paginatedHashtags = paginateList(
+    response.report.aggregates.hashtags,
+    page,
+    pageSize
+  );
+  const paginatedThemeAverages = paginateList(
+    response.report.aggregates.themeAverages,
+    page,
+    pageSize
+  );
+  const topPostsByMetric = Object.fromEntries(
+    Object.entries(response.report.aggregates.topPostsByMetric).map(([metric, posts]) => {
+      const paginated = paginateList(posts, page, pageSize);
+      return [metric, paginated.items];
+    })
+  );
+  const topPostsByMetricPagination = Object.fromEntries(
+    Object.entries(response.report.aggregates.topPostsByMetric).map(([metric, posts]) => {
+      const paginated = paginateList(posts, page, pageSize);
+      return [metric, paginated.pagination];
+    })
+  );
+  return {
+    ...response,
+    report: {
+      ...response.report,
+      posts: paginatedPosts.items,
+      aggregates: {
+        ...response.report.aggregates,
+        hashtags: paginatedHashtags.items,
+        themeAverages: paginatedThemeAverages.items,
+        topPostsByMetric
+      }
+    },
+    pagination: {
+      posts: paginatedPosts.pagination,
+      hashtags: paginatedHashtags.pagination,
+      themeAverages: paginatedThemeAverages.pagination,
+      topPostsByMetric: topPostsByMetricPagination
+    }
   };
 }
 
@@ -6573,7 +6717,7 @@ function deriveSetupStatus(input) {
       instagramLinkUrl,
       developersUrl,
       recommendedNextAction: "connect_instagram",
-      recommendedPrompt: "Run `instagram link --open` to connect Instagram, then rerun `setup status`."
+      recommendedPrompt: "Run `instasights instagram link --open` to connect Instagram, then rerun `setup status`."
     };
   }
   if (isActiveSync) {
@@ -6648,6 +6792,156 @@ function deriveSetupStatus(input) {
   };
 }
 
+// src/sync-logging.ts
+var STEP_TO_PHASE = {
+  queued: "queueing",
+  bootstrap: "queueing",
+  profile: "fetching profile/account data",
+  "account-insights": "fetching profile/account data",
+  "media-catalog": "fetching media catalog",
+  "filter-recent-media": "processing media bundles",
+  "fetch-media-detail-batch": "processing media bundles",
+  "fetch-media-metrics-batch": "processing media bundles",
+  "normalize-media-batch": "processing media bundles",
+  comments: "fetching comments",
+  persist: "persisting results",
+  "transcribe-media": "transcribing video",
+  "finalize-analysis": "finalizing analysis"
+};
+function formatCountProgress(completed, total) {
+  if (typeof completed !== "number" || !Number.isFinite(completed) || typeof total !== "number" || !Number.isFinite(total) || total <= 0) {
+    return null;
+  }
+  return `${completed}/${total}`;
+}
+function getSyncPhase(currentStep) {
+  if (!currentStep) {
+    return "working";
+  }
+  return STEP_TO_PHASE[currentStep] ?? currentStep.replaceAll("-", " ");
+}
+function formatDurationEstimate(seconds) {
+  if (typeof seconds !== "number" || !Number.isFinite(seconds) || seconds <= 0) {
+    return "Expect roughly 1-5 minutes depending on account size and transcript backlog.";
+  }
+  const roundedSeconds = Math.max(30, Math.round(seconds / 30) * 30);
+  const minutes = Math.floor(roundedSeconds / 60);
+  const remainderSeconds = roundedSeconds % 60;
+  const formatted = minutes > 0 && remainderSeconds > 0 ? `${minutes}m ${remainderSeconds}s` : minutes > 0 ? `${minutes}m` : `${roundedSeconds}s`;
+  return `A recent sync finished in about ${formatted}, so this run may take around that long.`;
+}
+function buildSyncProgressSnapshot(syncRun) {
+  if (!syncRun) {
+    return null;
+  }
+  return {
+    status: syncRun.status ?? null,
+    currentStep: syncRun.currentStep ?? null,
+    progressPercent: syncRun.progressPercent ?? null,
+    statusMessage: syncRun.statusMessage ?? null,
+    completedBundles: syncRun.progress?.completedBundles ?? null,
+    totalBundles: syncRun.progress?.totalBundles ?? null,
+    activeBundleLabel: syncRun.progress?.activeBundleLabel ?? null,
+    transcriptCompletedCount: syncRun.progress?.transcriptCompletedCount ?? null,
+    transcriptFailedCount: syncRun.progress?.transcriptFailedCount ?? null,
+    transcriptEligibleCount: syncRun.progress?.transcriptEligibleCount ?? null,
+    activeTranscriptMediaId: syncRun.progress?.activeTranscriptMediaId ?? null,
+    error: syncRun.error ?? null
+  };
+}
+function hasMeaningfulSyncProgressChange(left, right) {
+  return JSON.stringify(left) !== JSON.stringify(right);
+}
+function formatSyncProgressLine(syncRun) {
+  const phase = getSyncPhase(syncRun.currentStep);
+  const parts = [
+    `Sync ${syncRun.id} is ${syncRun.status} during ${phase}`
+  ];
+  if (typeof syncRun.progressPercent === "number") {
+    parts.push(`(${syncRun.progressPercent}%)`);
+  }
+  if (syncRun.statusMessage) {
+    parts.push(`- ${syncRun.statusMessage}`);
+  }
+  const bundleProgress = formatCountProgress(
+    syncRun.progress?.completedBundles ?? null,
+    syncRun.progress?.totalBundles ?? null
+  );
+  if (bundleProgress) {
+    parts.push(`bundles ${bundleProgress}`);
+  }
+  const transcriptProgress = formatCountProgress(
+    (syncRun.progress?.transcriptCompletedCount ?? 0) + (syncRun.progress?.transcriptFailedCount ?? 0),
+    syncRun.progress?.transcriptEligibleCount ?? null
+  );
+  if (transcriptProgress) {
+    parts.push(`transcripts ${transcriptProgress}`);
+  }
+  if (syncRun.progress?.activeBundleLabel) {
+    parts.push(`active bundle: ${syncRun.progress.activeBundleLabel}`);
+  }
+  if (syncRun.progress?.activeTranscriptMediaId) {
+    parts.push(`active transcript: ${syncRun.progress.activeTranscriptMediaId}`);
+  }
+  return parts.join(" ");
+}
+function logSyncRunQueued(input) {
+  if (input.queuedNewRun) {
+    logRuntime(
+      `Queued Instagram sync ${input.syncRunId ?? input.syncRun?.id ?? "unknown"}.`
+    );
+    logRuntime(formatDurationEstimate(input.syncRun?.durationSeconds ?? null));
+    return;
+  }
+  if (input.reusedExistingRun && input.syncRun) {
+    logRuntime(
+      `Reusing active Instagram sync ${input.syncRun.id}; waiting for the existing run to finish.`
+    );
+    logRuntime(formatDurationEstimate(input.syncRun.durationSeconds ?? null));
+    return;
+  }
+  if (input.syncRun) {
+    logRuntime(
+      `No new sync was queued for ${input.syncRun.id}. ${input.reason ?? "Existing data is still fresh."}`
+    );
+    if (input.syncRun.durationSeconds) {
+      logRuntime(
+        `Latest completed run duration: ${formatDurationEstimate(input.syncRun.durationSeconds)}`
+      );
+    }
+  }
+}
+async function waitForSyncRun(input) {
+  const pollIntervalMs = input.pollIntervalMs ?? 1e3;
+  const heartbeatIntervalMs = input.heartbeatIntervalMs ?? 1e4;
+  const sleep = input.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
+  let previousSnapshot = null;
+  let lastMeaningfulLogAt = Date.now();
+  while (true) {
+    const detail = await input.client.getSyncRun(input.syncRunId);
+    const syncRun = detail.syncRun;
+    const status = syncRun?.status;
+    await input.onPoll?.(detail);
+    if (syncRun) {
+      const nextSnapshot = buildSyncProgressSnapshot(syncRun);
+      if (hasMeaningfulSyncProgressChange(previousSnapshot, nextSnapshot)) {
+        logRuntime(formatSyncProgressLine(syncRun));
+        previousSnapshot = nextSnapshot;
+        lastMeaningfulLogAt = Date.now();
+      } else if (Date.now() - lastMeaningfulLogAt >= heartbeatIntervalMs) {
+        logRuntime(
+          `Still waiting on sync ${syncRun.id}; last known phase is ${syncRun.currentStep ?? "queued"} (${syncRun.progressPercent ?? 0}%).`
+        );
+        lastMeaningfulLogAt = Date.now();
+      }
+    }
+    if (!status || !["queued", "running"].includes(status)) {
+      return detail;
+    }
+    await sleep(pollIntervalMs);
+  }
+}
+
 // src/cli-main.ts
 var CLI_VERSION = getCliVersion();
 var CLI_ARGS = process3.argv.slice(2);
@@ -6676,17 +6970,6 @@ async function runHandled(task) {
     fail(error instanceof Error ? error.message : "CLI command failed.");
   }
 }
-async function printPolledSyncRun(client, syncRunId) {
-  while (true) {
-    const detail = await client.getSyncRun(syncRunId);
-    const status = detail.syncRun?.status;
-    if (!status || !["queued", "running"].includes(status)) {
-      printJson(detail);
-      return;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 2e3));
-  }
-}
 function printTopLevelHelp() {
   printText(
     [
@@ -6702,7 +6985,7 @@ function printTopLevelHelp() {
       "  snapshot latest",
       "  media list [--limit <n>] [--media-type <type>] [--since <iso>] [--until <iso>] [--days <n>] [--flat-metrics]",
       "  media get <mediaId>",
-      "  media analyze [--days <n>]",
+      "  media analyze [--days <n>] [--paginate <page>] [--page-size <n>]",
       "  report generate [--days <n>] [--output <path>]",
       "  sync list [--limit <n>]",
       "  sync get <syncRunId>",
@@ -6728,7 +7011,10 @@ var InstasightsCli = class {
     await runHandled(async () => {
       const root = getRootOptions(this);
       if (action === "status") {
-        const state = await readAuthState();
+        const state = await runWithRuntimeLogging(
+          "Checking local authentication status",
+          async () => readAuthState()
+        );
         printJson({
           authenticated: Boolean(state.accessToken),
           appUrl: root.appUrl,
@@ -6740,7 +7026,10 @@ var InstasightsCli = class {
         return;
       }
       if (action === "logout") {
-        await clearAuthTokens();
+        await runWithRuntimeLogging(
+          "Clearing local authentication state",
+          async () => clearAuthTokens()
+        );
         printJson({
           loggedOut: true,
           appUrl: root.appUrl
@@ -6748,18 +7037,27 @@ var InstasightsCli = class {
         return;
       }
       if (action === "login") {
-        const currentState = await readAuthState();
+        const currentState = await runWithRuntimeLogging(
+          "Loading current OAuth state",
+          async () => readAuthState()
+        );
         const port = parseOptionalInt(this.port, "port");
-        const nextState = await runBrowserOAuthLogin({
-          appUrl: root.appUrl,
-          browser: root.browser,
-          currentState: {
-            ...currentState,
-            appUrl: root.appUrl
-          },
-          port
-        });
-        await writeAuthState(nextState);
+        const nextState = await runWithRuntimeLogging(
+          "Starting browser OAuth login",
+          async () => runBrowserOAuthLogin({
+            appUrl: root.appUrl,
+            browser: root.browser,
+            currentState: {
+              ...currentState,
+              appUrl: root.appUrl
+            },
+            port
+          })
+        );
+        await runWithRuntimeLogging(
+          "Persisting refreshed local OAuth state",
+          async () => writeAuthState(nextState)
+        );
         printJson({
           authenticated: true,
           appUrl: nextState.appUrl,
@@ -6783,12 +7081,17 @@ var InstasightsCli = class {
         "stale-after-hours"
       ) ?? DEFAULT_STALE_AFTER_HOURS;
       const client = new InstasightsApiClient(root.appUrl);
-      const overview = await client.getAccountOverview();
-      const setupStatus = deriveSetupStatus({
-        overview,
-        appUrl: root.appUrl,
-        staleAfterHours
-      });
+      const setupStatus = await runWithRuntimeLogging(
+        "Evaluating Instagram setup status",
+        async () => {
+          const overview = await client.getAccountOverview();
+          return deriveSetupStatus({
+            overview,
+            appUrl: root.appUrl,
+            staleAfterHours
+          });
+        }
+      );
       if (setupStatus.status === "not_linked" && this.openLink && root.browser) {
         await openBrowser(setupStatus.instagramLinkUrl);
       }
@@ -6797,8 +7100,14 @@ var InstasightsCli = class {
   }
   async ["clean-reset"]() {
     await runHandled(async () => {
-      const client = new InstasightsApiClient(getRootOptions(this).appUrl);
-      printJson(await client.cleanReset());
+      const root = getRootOptions(this);
+      const client = new InstasightsApiClient(root.appUrl);
+      printJson(
+        await runWithRuntimeLogging(
+          "Clearing linked Instagram data while keeping the CLI logged in",
+          async () => client.cleanReset()
+        )
+      );
     });
   }
   async account(action) {
@@ -6806,8 +7115,14 @@ var InstasightsCli = class {
       if (action !== "overview") {
         fail("Unsupported account action.", { action });
       }
-      const client = new InstasightsApiClient(getRootOptions(this).appUrl);
-      printJson(await client.getAccountOverview());
+      const root = getRootOptions(this);
+      const client = new InstasightsApiClient(root.appUrl);
+      printJson(
+        await runWithRuntimeLogging(
+          "Fetching account overview",
+          async () => client.getAccountOverview()
+        )
+      );
     });
   }
   async snapshot(action) {
@@ -6815,18 +7130,30 @@ var InstasightsCli = class {
       if (action !== "latest") {
         fail("Unsupported snapshot action.", { action });
       }
-      const client = new InstasightsApiClient(getRootOptions(this).appUrl);
-      printJson(await client.getLatestSnapshot());
+      const root = getRootOptions(this);
+      const client = new InstasightsApiClient(root.appUrl);
+      printJson(
+        await runWithRuntimeLogging(
+          "Fetching the latest synced snapshot",
+          async () => client.getLatestSnapshot()
+        )
+      );
     });
   }
   async media(action, mediaId) {
     await runHandled(async () => {
-      const client = new InstasightsApiClient(getRootOptions(this).appUrl);
+      const root = getRootOptions(this);
+      const client = new InstasightsApiClient(root.appUrl);
       if (action === "get") {
         if (!mediaId) {
           fail("media get requires a mediaId.");
         }
-        printJson(await client.getMedia(mediaId));
+        printJson(
+          await runWithRuntimeLogging(
+            `Fetching media item ${mediaId}`,
+            async () => client.getMedia(mediaId)
+          )
+        );
         return;
       }
       if (action === "list") {
@@ -6841,7 +7168,12 @@ var InstasightsCli = class {
           days: days ?? void 0,
           flatMetrics: options.flatMetrics === true
         });
-        printJson(await client.listMedia(searchParams));
+        printJson(
+          await runWithRuntimeLogging(
+            "Listing synced media",
+            async () => client.listMedia(searchParams)
+          )
+        );
         return;
       }
       if (action === "analyze") {
@@ -6849,10 +7181,30 @@ var InstasightsCli = class {
           this.days,
           "days"
         ) ?? 30;
+        const page = parseOptionalInt(
+          this.paginate,
+          "paginate"
+        );
+        const pageSize = parseOptionalInt(
+          this.pageSize,
+          "page-size"
+        ) ?? 10;
         if (days !== 30) {
           fail("media analyze currently supports only --days 30.", { days });
         }
-        printJson(await client.getReport(days));
+        if (page !== void 0 && page < 1) {
+          fail("--paginate must be 1 or greater.", { page });
+        }
+        if (pageSize < 1) {
+          fail("--page-size must be 1 or greater.", { pageSize });
+        }
+        const reportResponse = await runWithRuntimeLogging(
+          `Fetching the ${days}-day media analysis report`,
+          async () => client.getReport(days)
+        );
+        printJson(
+          page === void 0 ? reportResponse : paginateReportResponse(reportResponse, page, pageSize)
+        );
         return;
       }
       fail("Unsupported media action.", { action });
@@ -6860,7 +7212,8 @@ var InstasightsCli = class {
   }
   async sync(action, syncRunId) {
     await runHandled(async () => {
-      const client = new InstasightsApiClient(getRootOptions(this).appUrl);
+      const root = getRootOptions(this);
+      const client = new InstasightsApiClient(root.appUrl);
       if (action === "list") {
         const limit = parseOptionalInt(
           this.limit,
@@ -6870,14 +7223,24 @@ var InstasightsCli = class {
         if (limit) {
           searchParams.set("limit", String(limit));
         }
-        printJson(await client.listSyncRuns(searchParams));
+        printJson(
+          await runWithRuntimeLogging(
+            "Listing recent sync runs",
+            async () => client.listSyncRuns(searchParams)
+          )
+        );
         return;
       }
       if (action === "get") {
         if (!syncRunId) {
           fail("sync get requires a syncRunId.");
         }
-        printJson(await client.getSyncRun(syncRunId));
+        printJson(
+          await runWithRuntimeLogging(
+            `Fetching sync run ${syncRunId}`,
+            async () => client.getSyncRun(syncRunId)
+          )
+        );
         return;
       }
       if (action === "run") {
@@ -6886,14 +7249,35 @@ var InstasightsCli = class {
           force: options.force === true,
           staleAfterHours: parseOptionalInt(options.staleAfterHours, "stale-after-hours") ?? DEFAULT_STALE_AFTER_HOURS
         };
-        const result = await client.triggerSync(payload);
+        const result = await runWithRuntimeLogging(
+          "Submitting the sync request",
+          async () => client.triggerSync(payload)
+        );
         if (options.wait) {
-          const queuedId = "syncRunId" in result ? result.syncRunId : "syncRun" in result && result.syncRun && typeof result.syncRun === "object" ? String(result.syncRun.id ?? "") : "";
+          const syncRun = "syncRun" in result ? result.syncRun : null;
+          const queuedId = "syncRunId" in result ? result.syncRunId : syncRun?.id ?? "";
+          logSyncRunQueued({
+            queuedNewRun: result.queuedNewRun,
+            reusedExistingRun: result.reusedExistingRun,
+            syncRun,
+            syncRunId: "syncRunId" in result ? result.syncRunId : void 0,
+            reason: "reason" in result ? result.reason : void 0
+          });
           if (!queuedId) {
             printJson(result);
             return;
           }
-          await printPolledSyncRun(client, queuedId);
+          logRuntime(
+            "Polling sync status every 1 second and printing full sync status updates until the run completes."
+          );
+          await waitForSyncRun({
+            client,
+            syncRunId: queuedId,
+            pollIntervalMs: 1e3,
+            onPoll: (detail) => {
+              printJson(detail);
+            }
+          });
           return;
         }
         printJson(result);
@@ -6908,14 +7292,18 @@ var InstasightsCli = class {
         fail("Unsupported report action.", { action });
       }
       const options = this;
+      const root = getRootOptions(this);
       const days = parseOptionalInt(options.days, "days") ?? 30;
-      const client = new InstasightsApiClient(getRootOptions(this).appUrl);
+      const client = new InstasightsApiClient(root.appUrl);
       printJson(
-        await generateHtmlReport({
-          client,
-          days,
-          outputPath: options.output
-        })
+        await runWithRuntimeLogging(
+          `Generating the ${days}-day HTML report`,
+          async () => generateHtmlReport({
+            client,
+            days,
+            outputPath: options.output
+          })
+        )
       );
     });
   }
@@ -6928,7 +7316,10 @@ var InstasightsCli = class {
       const instagramLinkUrl = new URL("/api/login", root.appUrl).toString();
       const shouldOpen = root.browser && (this.open ?? true);
       if (shouldOpen) {
+        logRuntime("Opening the Instagram linking handoff in the browser.");
         await openBrowser(instagramLinkUrl);
+      } else {
+        logRuntime("Browser launch is disabled; printing the Instagram linking URL instead.");
       }
       printJson({
         instagramLinkUrl,
@@ -6938,13 +7329,17 @@ var InstasightsCli = class {
   }
   async update(action) {
     await runHandled(async () => {
+      const root = getRootOptions(this);
       const options = this;
       const force = options.force === true;
       const shouldApply = action === "apply" || options.apply === true;
-      const result = await checkForUpdates({
-        allowCache: false,
-        force
-      });
+      const result = await runWithRuntimeLogging(
+        "Checking for CLI updates",
+        async () => checkForUpdates({
+          allowCache: false,
+          force
+        })
+      );
       if (action !== "check" && action !== "apply") {
         fail("Unsupported update action.", { action });
       }
@@ -6952,9 +7347,12 @@ var InstasightsCli = class {
         printJson(result);
         return;
       }
-      const applyResult = await applyUpdate(result, {
-        force
-      });
+      const applyResult = await runWithRuntimeLogging(
+        "Applying the CLI update",
+        async () => applyUpdate(result, {
+          force
+        })
+      );
       printJson({
         ...result,
         apply: applyResult
@@ -6966,7 +7364,7 @@ __decorateClass([
   (0, import_commander_ts.option)("--app-url <url>", "Use a different Instasights app URL")
 ], InstasightsCli.prototype, "appUrl", 2);
 __decorateClass([
-  (0, import_commander_ts.option)("--json", "Accepted for compatibility; data commands already default to JSON")
+  (0, import_commander_ts.option)("--json", "Legacy compatibility flag; data commands already default to JSON")
 ], InstasightsCli.prototype, "json", 2);
 __decorateClass([
   (0, import_commander_ts.option)("--no-browser", "Disable automatic browser launch")
@@ -7001,6 +7399,8 @@ __decorateClass([
   (0, import_commander_ts.commandOption)("--until <iso>", "Only include media posted at or before this ISO timestamp"),
   (0, import_commander_ts.commandOption)("--days <n>", "Only include media from the trailing N days"),
   (0, import_commander_ts.commandOption)("--flat-metrics", "Include stored flat metrics and analysis fields"),
+  (0, import_commander_ts.commandOption)("--paginate <page>", "Paginate large analysis arrays for easier machine parsing"),
+  (0, import_commander_ts.commandOption)("--page-size <n>", "Number of items per page when --paginate is used"),
   __decorateParam(0, (0, import_commander_ts.requiredArg)("action")),
   __decorateParam(1, (0, import_commander_ts.optionalArg)("mediaId"))
 ], InstasightsCli.prototype, "media", 1);

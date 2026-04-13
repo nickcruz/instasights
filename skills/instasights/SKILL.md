@@ -70,6 +70,7 @@ Manual update commands
 - `./instasights media list --limit 10 --days 30 --flat-metrics`
 - `./instasights media get <mediaId>`
 - `./instasights media analyze --days 30`
+- `./instasights media analyze --days 30 --paginate 1 --page-size 5`
 - `./instasights report generate --days 30`
 - `./instasights sync list --limit 10`
 - `./instasights sync get <syncRunId>`

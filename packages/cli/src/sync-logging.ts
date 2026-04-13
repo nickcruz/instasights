@@ -196,9 +196,10 @@ export async function waitForSyncRun(input: {
   syncRunId: string;
   pollIntervalMs?: number;
   heartbeatIntervalMs?: number;
+  onPoll?: (detail: SyncRunDetailResponse) => void | Promise<void>;
   sleep?: (ms: number) => Promise<void>;
 }) {
-  const pollIntervalMs = input.pollIntervalMs ?? 2_000;
+  const pollIntervalMs = input.pollIntervalMs ?? 1_000;
   const heartbeatIntervalMs = input.heartbeatIntervalMs ?? 10_000;
   const sleep =
     input.sleep ??
@@ -211,6 +212,8 @@ export async function waitForSyncRun(input: {
     const detail = await input.client.getSyncRun(input.syncRunId);
     const syncRun = detail.syncRun;
     const status = syncRun?.status;
+
+    await input.onPoll?.(detail);
 
     if (syncRun) {
       const nextSnapshot = buildSyncProgressSnapshot(syncRun);

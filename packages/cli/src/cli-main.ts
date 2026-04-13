@@ -28,6 +28,7 @@ import {
 } from "./output";
 import { normalizeAppUrl, runBrowserOAuthLogin } from "./oauth";
 import { generateHtmlReport } from "./report-generator";
+import { paginateReportResponse } from "./report-pagination";
 import { deriveSetupStatus } from "./status";
 import { logSyncRunQueued, waitForSyncRun } from "./sync-logging";
 import { applyUpdate, checkForUpdates } from "./updater";
@@ -92,7 +93,7 @@ function printTopLevelHelp() {
       "  snapshot latest",
       "  media list [--limit <n>] [--media-type <type>] [--since <iso>] [--until <iso>] [--days <n>] [--flat-metrics]",
       "  media get <mediaId>",
-      "  media analyze [--days <n>]",
+      "  media analyze [--days <n>] [--paginate <page>] [--page-size <n>]",
       "  report generate [--days <n>] [--output <path>]",
       "  sync list [--limit <n>]",
       "  sync get <syncRunId>",
@@ -291,6 +292,8 @@ class InstasightsCli {
   @commandOption("--until <iso>", "Only include media posted at or before this ISO timestamp")
   @commandOption("--days <n>", "Only include media from the trailing N days")
   @commandOption("--flat-metrics", "Include stored flat metrics and analysis fields")
+  @commandOption("--paginate <page>", "Paginate large analysis arrays for easier machine parsing")
+  @commandOption("--page-size <n>", "Number of items per page when --paginate is used")
   async media(
     this: RootCommand,
     @requiredArg("action") action: string,
@@ -347,16 +350,37 @@ class InstasightsCli {
           (this as RootCommand & { days?: string }).days,
           "days",
         ) ?? 30;
+        const page = parseOptionalInt(
+          (this as RootCommand & { paginate?: string }).paginate,
+          "paginate",
+        );
+        const pageSize =
+          parseOptionalInt(
+            (this as RootCommand & { pageSize?: string }).pageSize,
+            "page-size",
+          ) ?? 10;
 
         if (days !== 30) {
           fail("media analyze currently supports only --days 30.", { days });
         }
 
+        if (page !== undefined && page < 1) {
+          fail("--paginate must be 1 or greater.", { page });
+        }
+
+        if (pageSize < 1) {
+          fail("--page-size must be 1 or greater.", { pageSize });
+        }
+
+        const reportResponse = await runWithRuntimeLogging(
+          `Fetching the ${days}-day media analysis report`,
+          async () => client.getReport(days),
+        );
+
         printJson(
-          await runWithRuntimeLogging(
-            `Fetching the ${days}-day media analysis report`,
-            async () => client.getReport(days),
-          ),
+          page === undefined
+            ? reportResponse
+            : paginateReportResponse(reportResponse, page, pageSize),
         );
         return;
       }
@@ -444,14 +468,16 @@ class InstasightsCli {
           }
 
           logRuntime(
-            "Polling sync status every 2 seconds. If nothing changes for 10 seconds, the CLI will emit a heartbeat update.",
+            "Polling sync status every 1 second and printing full sync status updates until the run completes.",
           );
-          printJson(
-            await waitForSyncRun({
-              client,
-              syncRunId: queuedId,
-            }),
-          );
+          await waitForSyncRun({
+            client,
+            syncRunId: queuedId,
+            pollIntervalMs: 1_000,
+            onPoll: (detail) => {
+              printJson(detail);
+            },
+          });
           return;
         }
 

@@ -50,13 +50,13 @@ export function assertSupportedReportDays(days: number) {
 export function getReadyReport(response: ReportResponse) {
   if (response.status === "not_linked") {
     throw new Error(
-      "No linked Instagram account found. Run `instagram instagram link --open` first.",
+      "No linked Instagram account found. Run `instasights instagram link --open` first.",
     );
   }
 
   if (response.status === "not_synced" || !response.report) {
     throw new Error(
-      "No synced analysis report is available. Run `instagram sync run --wait` first.",
+      "No synced analysis report is available. Run `instasights sync run --wait` first.",
     );
   }
 

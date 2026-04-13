@@ -41,7 +41,7 @@ export function deriveSetupStatus(input: {
       developersUrl,
       recommendedNextAction: "connect_instagram",
       recommendedPrompt:
-        "Run `instagram link --open` to connect Instagram, then rerun `setup status`.",
+        "Run `instasights instagram link --open` to connect Instagram, then rerun `setup status`.",
     };
   }
 
@@ -122,4 +122,3 @@ export function deriveSetupStatus(input: {
       "Run `snapshot latest` for account analysis, then `media list` or `media get <id>` for drilldowns.",
   };
 }
-

@@ -143,11 +143,18 @@ Fetches one media item by Instagram media ID.
 
 Use this when you already know the media ID and want full stored detail, including any transcript, metrics, and derived fields attached to that item.
 
-### `media analyze [--days <n>]`
+### `media analyze [--days <n>] [--paginate <page>] [--page-size <n>]`
 
 Fetches the precomputed analysis report for the trailing time window.
 
 Right now this command only supports `--days 30`.
+
+Flags:
+
+- `--paginate <page>`
+  Returns a paginated version of the heavy report arrays so an LLM or script can fetch the report incrementally.
+- `--page-size <n>`
+  Controls how many items each paginated array includes per page. Defaults to `10`.
 
 Use it when you want the report-style summary rather than raw media rows.
 
