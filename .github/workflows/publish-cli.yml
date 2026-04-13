@@ -22,7 +22,7 @@ on:
         type: string
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
 
 jobs:
@@ -213,3 +213,75 @@ jobs:
 
           echo "Published skill bundle version: ${VERSION}"
           echo "Skill bundle manifest: ${RELEASES_BASE_URL%/}/${SKILL_RELEASES_PREFIX}/latest.json"
+
+      - name: Prepare GitHub release assets
+        id: release_assets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION="${{ steps.version.outputs.next }}"
+          TAG="cli-v${VERSION}"
+          RELEASE_DIR="$(mktemp -d)"
+          NOTES_FILE="${RELEASE_DIR}/release-notes.md"
+
+          cp "./latest.json" "${RELEASE_DIR}/cli-latest.json"
+          cp "packages/cli/dist/skill/latest.json" "${RELEASE_DIR}/skill-latest.json"
+
+          {
+            echo "Instasights CLI ${VERSION}"
+            echo
+
+            if [ -n "${{ github.event.inputs.notes }}" ]; then
+              echo "${{ github.event.inputs.notes }}"
+              echo
+            fi
+
+            echo "Artifacts"
+            echo "- \`instasights.mjs\`"
+            echo "- \`instasights-updater.mjs\`"
+            echo "- \`instasights.version.json\`"
+            echo "- \`instasights-skill.zip\`"
+            echo "- \`cli-latest.json\`"
+            echo "- \`skill-latest.json\`"
+          } > "${NOTES_FILE}"
+
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "title=Instasights CLI ${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "release_dir=${RELEASE_DIR}" >> "$GITHUB_OUTPUT"
+          echo "notes_file=${NOTES_FILE}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish companion GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release_assets.outputs.tag }}
+          RELEASE_TITLE: ${{ steps.release_assets.outputs.title }}
+          RELEASE_DIR: ${{ steps.release_assets.outputs.release_dir }}
+          RELEASE_NOTES_FILE: ${{ steps.release_assets.outputs.notes_file }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            gh release edit "${RELEASE_TAG}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --title "${RELEASE_TITLE}" \
+              --notes-file "${RELEASE_NOTES_FILE}"
+          else
+            gh release create "${RELEASE_TAG}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --title "${RELEASE_TITLE}" \
+              --notes-file "${RELEASE_NOTES_FILE}"
+          fi
+
+          gh release upload "${RELEASE_TAG}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --clobber \
+            "packages/cli/dist/instasights.mjs" \
+            "packages/cli/dist/instasights-updater.mjs" \
+            "packages/cli/dist/instasights.version.json" \
+            "packages/cli/dist/skill/${{ steps.version.outputs.next }}/instasights-skill.zip" \
+            "${RELEASE_DIR}/cli-latest.json" \
+            "${RELEASE_DIR}/skill-latest.json"
+
+          echo "Published GitHub release: ${RELEASE_TAG}"
