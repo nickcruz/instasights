@@ -6911,6 +6911,15 @@ function logSyncRunQueued(input) {
     }
   }
 }
+function resolveWaitableSyncRunId(result) {
+  if (result.queuedNewRun) {
+    return result.syncRunId;
+  }
+  if (!("syncRun" in result) || !result.syncRun) {
+    return null;
+  }
+  return ["queued", "running"].includes(result.syncRun.status) ? result.syncRun.id : null;
+}
 async function waitForSyncRun(input) {
   const pollIntervalMs = input.pollIntervalMs ?? 1e3;
   const heartbeatIntervalMs = input.heartbeatIntervalMs ?? 1e4;
@@ -7255,12 +7264,12 @@ var InstasightsCli = class {
         );
         if (options.wait) {
           const syncRun = "syncRun" in result ? result.syncRun : null;
-          const queuedId = "syncRunId" in result ? result.syncRunId : syncRun?.id ?? "";
+          const queuedId = resolveWaitableSyncRunId(result);
           logSyncRunQueued({
             queuedNewRun: result.queuedNewRun,
             reusedExistingRun: result.reusedExistingRun,
             syncRun,
-            syncRunId: "syncRunId" in result ? result.syncRunId : void 0,
+            syncRunId: "syncRunId" in result ? result.syncRunId : queuedId ?? void 0,
             reason: "reason" in result ? result.reason : void 0
           });
           if (!queuedId) {

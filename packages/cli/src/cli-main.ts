@@ -30,7 +30,7 @@ import { normalizeAppUrl, runBrowserOAuthLogin } from "./oauth";
 import { generateHtmlReport } from "./report-generator";
 import { paginateReportResponse } from "./report-pagination";
 import { deriveSetupStatus } from "./status";
-import { logSyncRunQueued, waitForSyncRun } from "./sync-logging";
+import { logSyncRunQueued, resolveWaitableSyncRunId, waitForSyncRun } from "./sync-logging";
 import { applyUpdate, checkForUpdates } from "./updater";
 import { getCliVersion } from "./version";
 
@@ -452,13 +452,13 @@ class InstasightsCli {
 
         if (options.wait) {
           const syncRun = "syncRun" in result ? result.syncRun : null;
-          const queuedId = "syncRunId" in result ? result.syncRunId : syncRun?.id ?? "";
+          const queuedId = resolveWaitableSyncRunId(result);
 
           logSyncRunQueued({
             queuedNewRun: result.queuedNewRun,
             reusedExistingRun: result.reusedExistingRun,
             syncRun,
-            syncRunId: "syncRunId" in result ? result.syncRunId : undefined,
+            syncRunId: "syncRunId" in result ? result.syncRunId : queuedId ?? undefined,
             reason: "reason" in result ? result.reason : undefined,
           });
 
