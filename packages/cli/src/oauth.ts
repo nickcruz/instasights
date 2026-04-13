@@ -18,6 +18,8 @@ function randomBase64Url(bytes = 32) {
   return crypto.randomBytes(bytes).toString("base64url");
 }
 
+export const OAUTH_CALLBACK_TIMEOUT_MS = 5 * 60 * 1000;
+
 export function normalizeAppUrl(appUrl: string) {
   return appUrl.replace(/\/+$/, "");
 }
@@ -150,24 +152,27 @@ type CallbackResult =
       error: string;
     };
 
-async function waitForCallback(input: {
+export async function waitForCallback(input: {
   redirectUri: string;
   expectedState: string;
+  timeoutMs?: number;
 }) {
   const redirectUrl = new URL(input.redirectUri);
   const port = Number.parseInt(redirectUrl.port, 10);
   const hostname = redirectUrl.hostname;
+  const timeoutMs = input.timeoutMs ?? OAUTH_CALLBACK_TIMEOUT_MS;
 
   return await new Promise<CallbackResult>((resolve, reject) => {
-    logRuntime("Waiting for the browser OAuth callback on the local loopback server...", {
+    logRuntime("Waiting for Google sign-in to finish in the browser...", {
+      authorizeStep: "pending_browser_login",
       redirectUri: input.redirectUri,
-      timeoutMinutes: 10,
+      timeoutMinutes: timeoutMs / 60_000,
     });
 
     const timeout = setTimeout(() => {
       server.close(() => undefined);
-      reject(new Error("Timed out waiting for OAuth callback."));
-    }, 10 * 60 * 1000);
+      reject(new Error("Timed out waiting for Google sign-in to finish in the browser."));
+    }, timeoutMs);
 
     const server = http.createServer((request, response) => {
       const requestUrl = new URL(request.url ?? "/", input.redirectUri);
@@ -268,9 +273,15 @@ export async function runBrowserOAuthLogin(input: {
     });
   }
 
+  logRuntime("The CLI will keep waiting here until the browser login finishes or the timeout is reached.", {
+    redirectUri,
+    timeoutMinutes: OAUTH_CALLBACK_TIMEOUT_MS / 60_000,
+  });
+
   const callback = await waitForCallback({
     redirectUri,
     expectedState: state,
+    timeoutMs: OAUTH_CALLBACK_TIMEOUT_MS,
   });
 
   logRuntime("OAuth callback received; finalizing login.");
