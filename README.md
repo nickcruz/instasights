@@ -120,8 +120,11 @@ Useful commands:
 
 ```bash
 yarn build:cli
+yarn package:skill
+yarn build:skill
 yarn typecheck
 yarn test:cli
+yarn test:packaging
 yarn test:web
 python3 -m pytest services/transcriber/tests
 ```
@@ -131,6 +134,29 @@ The managed MJS runtime written into the skill lives at:
 ```text
 skills/instasights/bin/instasights.mjs
 ```
+
+## Skill Bundle Distribution
+
+Instasights now publishes a full installable skill zip in addition to the managed CLI update files.
+
+- Packaging command: `yarn build:cli && yarn package:skill`
+- Default local output root: `packages/cli/dist/skill`
+- Versioned bundle path: `packages/cli/dist/skill/<version>/instasights-skill.zip`
+- Stable latest bundle path: `packages/cli/dist/skill/latest/instasights-skill.zip`
+- Stable latest manifest: `packages/cli/dist/skill/latest.json`
+
+The packaged zip expands to a top-level `instasights/` folder and includes the committed skill contents such as `SKILL.md`, `CLI.md`, `agents/openai.yaml`, `instasights`, and `bin/*`.
+
+Local-only skill state stays out of the bundle:
+
+- `.auth/`
+- `.cache/`
+- `.DS_Store`
+- anything listed in `skills/instasights/.skillignore`
+
+In CI, `.github/workflows/publish-cli.yml` publishes the existing CLI self-update artifacts under `cli/*` and the full skill bundle under `skill/*`.
+
+For the full packaging and S3 layout details, see [docs/skill-bundle-distribution.md](/Users/nickcruz/repos/instagram-insights/docs/skill-bundle-distribution.md).
 
 ## License
 

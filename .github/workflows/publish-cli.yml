@@ -33,6 +33,7 @@ jobs:
       RELEASES_BASE_URL: ${{ vars.INSTASIGHTS_CLI_RELEASES_BASE_URL }}
       RELEASES_BUCKET: ${{ vars.INSTASIGHTS_CLI_RELEASES_BUCKET }}
       RELEASES_PREFIX: ${{ vars.INSTASIGHTS_CLI_RELEASES_PREFIX || 'cli' }}
+      SKILL_RELEASES_PREFIX: ${{ vars.INSTASIGHTS_SKILL_RELEASES_PREFIX || 'skill' }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -133,6 +134,17 @@ jobs:
             --notes "${{ github.event.inputs.notes }}" \
             --published-at "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
+      - name: Package full skill bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          node ./scripts/package-skill-bundle.mjs \
+            --version "${{ steps.version.outputs.next }}" \
+            --base-url "${RELEASES_BASE_URL%/}/${SKILL_RELEASES_PREFIX}" \
+            --output-root "packages/cli/dist/skill" \
+            --published-at "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
       - name: Upload CLI artifacts to S3
         shell: bash
         run: |
@@ -160,3 +172,44 @@ jobs:
 
           echo "Published CLI version: ${VERSION}"
           echo "CLI manifest: ${RELEASES_BASE_URL%/}/${RELEASES_PREFIX}/latest.json"
+
+      - name: Upload skill bundle artifacts to S3
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION="${{ steps.version.outputs.next }}"
+          VERSION_PREFIX="${SKILL_RELEASES_PREFIX}/${VERSION}"
+          LATEST_PREFIX="${SKILL_RELEASES_PREFIX}/latest"
+
+          upload_file() {
+            local source_path="$1"
+            local destination_path="$2"
+            local content_type="$3"
+            local cache_control="$4"
+
+            aws s3 cp "${source_path}" "s3://${RELEASES_BUCKET}/${destination_path}" \
+              --content-type "${content_type}" \
+              --cache-control "${cache_control}"
+          }
+
+          upload_file \
+            "packages/cli/dist/skill/${VERSION}/instasights-skill.zip" \
+            "${VERSION_PREFIX}/instasights-skill.zip" \
+            "application/zip" \
+            "public, max-age=31536000, immutable"
+
+          upload_file \
+            "packages/cli/dist/skill/latest/instasights-skill.zip" \
+            "${LATEST_PREFIX}/instasights-skill.zip" \
+            "application/zip" \
+            "no-store, no-cache, max-age=0, must-revalidate"
+
+          upload_file \
+            "packages/cli/dist/skill/latest.json" \
+            "${SKILL_RELEASES_PREFIX}/latest.json" \
+            "application/json; charset=utf-8" \
+            "no-store, no-cache, max-age=0, must-revalidate"
+
+          echo "Published skill bundle version: ${VERSION}"
+          echo "Skill bundle manifest: ${RELEASES_BASE_URL%/}/${SKILL_RELEASES_PREFIX}/latest.json"
