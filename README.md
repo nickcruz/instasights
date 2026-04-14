@@ -13,7 +13,7 @@
 
 Instasights is a skill-first Instagram analytics workflow built around one installable skill, a bundled Node-powered CLI, a hosted REST API, and durable sync/transcription services.
 
-<img alt="instasights-preview" src="./docs/instasights-claude.png" width="800"/>
+<img alt="instasights-preview" src="./docs/instasights-claude.png" />
 
 ## What This Repo Contains
 
