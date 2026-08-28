@@ -1,0 +1,15 @@
+.git
+.github
+.pi
+.vercel
+node_modules
+dist
+coverage
+.env*
+*.log
+.DS_Store
+PLAN.md
+docs
+packages
+skills
+test

@@ -1,14 +1,14 @@
 {
   "name": "instasights",
-  "description": "Install one Instasights skill with a bundled CLI for auth, sync, and analytics over the hosted REST API.",
-  "version": "1.0.0",
+  "description": "Connect Instagram and query live professional-account analytics through a stateless API.",
+  "version": "2.0.0",
   "author": {
     "name": "Nick Reyes"
   },
   "homepage": "https://github.com/nickcruz/instasights",
   "repository": "https://github.com/nickcruz/instasights",
   "license": "MIT",
-  "keywords": ["instagram", "analytics", "creator", "social-media", "cli"],
+  "keywords": ["instagram", "analytics", "creator", "claude-code"],
   "skills": "./skills/",
   "category": "data-analysis"
 }

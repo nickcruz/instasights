@@ -1,68 +1,41 @@
-# Claude Plugin Setup
+# Claude Code Setup
 
-Instasights now installs as one skill with a bundled Node-based CLI.
+## Install
 
-## Install from the repository marketplace
-
-```text
-/plugin marketplace add https://github.com/kingscrosslabs/marketplace.git
-/plugin install instagram@kingscrosslabs-marketplace
-```
-
-## What happens during install
-
-1. Claude installs the Instasights skill bundle.
-2. The skill exposes a stable launcher at `./instasights` that verifies Node.js 20+ and then calls the bundled runtime at `./bin/instasights.mjs`.
-3. The CLI authenticates against the hosted OAuth endpoints under `/oauth/*`.
-4. The hosted app finishes Google sign-in in the browser and resumes the waiting localhost callback.
-5. The installed skill stores auth state in its own `.auth/state.json` file.
-6. The skill's `.skillignore` excludes `.auth/` and `.cache/` so local auth and cache data are not synced or published.
-
-## First run
-
-```bash
-./skills/instasights/instasights auth login
-./skills/instasights/instasights setup status
-```
-
-If setup reports `not_linked`, run:
-
-```bash
-./skills/instasights/instasights instagram link --open
-```
-
-If setup reports `not_synced` or `stale`, run:
-
-```bash
-./skills/instasights/instasights sync run --wait
-```
-
-## Troubleshooting
-
-### I need to re-authenticate Google
-
-Run:
-
-```bash
-./skills/instasights/instasights auth login
-```
-
-### I still need to link Instagram
-
-Run:
-
-```bash
-./skills/instasights/instasights instagram link --open
-```
-
-### I want to inspect the backend directly
-
-Use the support page:
+Run these commands inside Claude Code:
 
 ```text
-https://YOUR_APP_DOMAIN/developers
+/plugin marketplace add nickcruz/instasights
+/plugin install instasights@instasights-plugins
 ```
 
-That page includes status hints, CLI examples, and the legacy API-key path.
+## Use
 
-Node.js 20+ is required. `INSTASIGHTS_UPDATE_MANIFEST_URL` can override the hosted manifest URL when you need to test a staging build.
+Ask Claude:
+
+> Connect my Instagram account and analyze the last 30 days.
+
+Claude will run the installed Instasights skill. If login is needed, a browser opens directly to Instagram authorization. The credential and its local proof remain under the installed skill's ignored `.auth/` directory.
+
+No Google login, manual sync, database, MCP server, or API key is involved.
+
+## Requirements
+
+- Claude Code
+- Node.js 20 or newer
+- An Instagram professional account
+- A browser on the same machine as Claude Code
+
+## Manual troubleshooting
+
+From the installed skill directory:
+
+```bash
+./instasights status
+./instasights login
+./instasights account
+./instasights insights --days 30
+./instasights media list --days 30
+```
+
+Set `INSTASIGHTS_API_URL` only when testing a local or staging API.

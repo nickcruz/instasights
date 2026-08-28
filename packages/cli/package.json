@@ -1,25 +1,10 @@
 {
   "name": "@instasights/cli",
+  "version": "2.0.0",
   "private": true,
-  "version": "1.0.0",
   "type": "module",
-  "bin": {
-    "instasights": "./dist/instasights.mjs"
-  },
   "scripts": {
-    "build": "node ./build.mjs",
-    "typecheck": "tsc --project tsconfig.json --noEmit",
-    "test": "tsx --test \"src/**/*.test.ts\""
-  },
-  "dependencies": {
-    "@instasights/contracts": "*",
-    "commander": "^7.2.0",
-    "commander-ts": "^0.2.0",
-    "reflect-metadata": "^0.1.14"
-  },
-  "devDependencies": {
-    "@types/node": "latest",
-    "tsx": "^4.21.0",
-    "typescript": "latest"
+    "build": "node build.mjs",
+    "test": "node --test test/*.test.mjs"
   }
 }

@@ -1,46 +1,5 @@
-#!/usr/bin/env bash
-
-set -euo pipefail
-
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SKILL_ROOT="$SCRIPT_DIR"
-BIN_DIR="$SKILL_ROOT/bin"
-CLI_ENTRY="$BIN_DIR/instasights.mjs"
-UPDATER_ENTRY="$BIN_DIR/instasights-updater.mjs"
-VERSION_FILE="$BIN_DIR/instasights.version.json"
-
-fail() {
-  printf '%s\n' "$1" >&2
-  exit 1
-}
-
-info() {
-  printf '%s\n' "$1" >&2
-}
-
-require_node() {
-  command -v node >/dev/null 2>&1 || fail "Instasights requires Node.js 20 or newer on your PATH."
-}
-
-require_node_version() {
-  local version major
-  version="$(node --version 2>/dev/null)" || fail "Unable to read the installed Node.js version."
-  version="${version#v}"
-  major="${version%%.*}"
-
-  [[ "$major" =~ ^[0-9]+$ ]] || fail "Unable to parse the installed Node.js version."
-  (( major >= 20 )) || fail "Instasights requires Node.js 20 or newer. Found v${version}."
-}
-
-ensure_cli_runtime() {
-  [[ -f "$CLI_ENTRY" ]] || fail "Bundled CLI runtime is missing from $CLI_ENTRY. Run yarn build:cli or reinstall the skill."
-  [[ -f "$UPDATER_ENTRY" ]] || fail "Bundled updater runtime is missing from $UPDATER_ENTRY. Run yarn build:cli or reinstall the skill."
-  [[ -f "$VERSION_FILE" ]] || info "Version metadata is missing; the updater will treat this install as legacy until the next update."
-}
-
-require_node
-require_node_version
-ensure_cli_runtime
-
-export INSTASIGHTS_SKILL_ROOT="$SKILL_ROOT"
-exec node "$CLI_ENTRY" "$@"
+#!/usr/bin/env sh
+set -eu
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+export INSTASIGHTS_SKILL_ROOT="$ROOT"
+exec node "$ROOT/bin/instasights.mjs" "$@"

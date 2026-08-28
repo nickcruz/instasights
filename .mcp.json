@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "instagram": {
-      "type": "http",
-      "url": "https://instasights.kingscrosslabs.com/mcp"
-    }
-  }
-}

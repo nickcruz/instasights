@@ -1,1 +1,0 @@
-"""Offline Whisper transcriber service."""

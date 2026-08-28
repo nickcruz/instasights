@@ -1,165 +1,65 @@
 # Instasights
 
-<p align="center">
-  <a href="#install"><img alt="Skill + CLI" src="https://img.shields.io/badge/Skill-CLI%20First-D97757?style=for-the-badge"/></a>
-  <a href="https://kingscrosslabs.com/instasights" target="_blank" rel="noreferrer"><img alt="King's Cross Labs - Instasights" src="https://img.shields.io/badge/Website-kingscrosslabs.com-16A34A?style=for-the-badge"/></a>
-</p>
+Instasights is a small, stateless Instagram analytics wrapper built for Claude Code. A bundled CLI handles Instagram authorization and calls a NestJS API that forwards allowlisted requests to the live Instagram Graph API.
 
-<p align="center">
-  <a href="./apps/web"><img alt="Next.js 16" src="https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white&style=for-the-badge"/></a>
-  <a href="./services/transcriber"><img alt="FastAPI Whisper" src="https://img.shields.io/badge/FastAPI-Whisper-009688?logo=fastapi&logoColor=white&style=for-the-badge"/></a>
-  <a href="./LICENSE"><img alt="License MIT" src="https://img.shields.io/badge/License-MIT-16A34A?style=for-the-badge"/></a>
-</p>
+There is no analytics database, sync job, worker, report store, transcription service, MCP server, or AWS infrastructure.
 
-Instasights is a skill-first Instagram analytics workflow built around one installable skill, a bundled Node-powered CLI, a hosted REST API, and durable sync/transcription services.
-
-<img alt="instasights-preview" src="./docs/instasights-claude.png" />
-
-## What This Repo Contains
-
-- A hosted web app in `apps/web` that exposes `/`, `/developers`, OAuth routes, `/api/login`, `/api/callback`, and `/api/v1/*`.
-- A bundled CLI in `packages/cli` that authenticates with OAuth PKCE, stores tokens inside the installed skill folder, and wraps the hosted API.
-- Shared packages in `packages/*` for contracts, database access, and infrastructure definitions.
-- A transcriber service in `services/transcriber` used by the sync pipeline.
-- One installable skill under `skills/instasights`.
-
-## Install
-
-Add the repository as a Claude marketplace and install the skill package:
+## Install in Claude Code
 
 ```text
-/plugin marketplace add https://github.com/kingscrosslabs/marketplace.git
-/plugin install instagram@kingscrosslabs-marketplace
+/plugin marketplace add nickcruz/instasights
+/plugin install instasights@instasights-plugins
 ```
 
-The CLI requires Node.js 20 or newer. After install, run the skill launcher so it can execute the bundled MJS runtime from the skill:
+Then ask Claude:
+
+> Connect my Instagram account and analyze the last 30 days.
+
+Claude uses the bundled skill to open Instagram authorization and query live profile, account-insight, media, and per-media insight data.
+
+## Local API development
 
 ```bash
-./skills/instasights/instasights auth login
-./skills/instasights/instasights setup status
-./skills/instasights/instasights sync run --wait
-./skills/instasights/instasights media analyze --days 30
-./skills/instasights/instasights report generate --days 30
+yarn install
+yarn dev
 ```
 
-## Supported CLI Commands
+Required environment variables are documented in `.env.example`. The Instagram redirect URI is:
 
-- `auth login`
-- `auth status`
-- `auth logout`
-- `setup status`
-- `account overview`
-- `snapshot latest`
-- `media list [--days <n>] [--flat-metrics]`
-- `media get <mediaId>`
-- `media analyze [--days 30]`
-- `report generate [--days 30] [--output <path>]`
-- `sync list`
-- `sync get <syncRunId>`
-- `sync run [--wait]`
-- `instagram link [--open]`
-- `update check [--apply] [--force]`
-- `update apply [--force]`
-
-All data-returning commands default to JSON output. Networked commands also emit structured JSON progress logs on stderr by default so long-running steps like `sync run --wait` explain what is happening and how long they may take.
-
-`report generate` is the static export path: it writes a self-contained HTML dashboard to disk using existing report and media data, without making any extra model API call.
-
-## CLI Updates
-
-- The committed skill launcher executes `node skills/instasights/bin/instasights.mjs` after verifying Node.js 20+ is available.
-- The skill now ships with committed MJS runtime files in `skills/instasights/bin/` instead of bootstrapping a separate runtime download on first run.
-- The installed CLI continues checking for newer releases through its normal self-update flow.
-- Published CLI bundles are versioned independently and store the installed version in `skills/instasights/bin/instasights.version.json`.
-- The skill ships with `skills/instasights/.skillignore` so `.auth/` and `.cache/` stay local-only and are excluded from SkillTree sync/publish.
-- If the version file is missing, the updater treats the install as legacy and prefers the newest published release.
-- To inspect or force the updater manually, run:
-
-```bash
-./skills/instasights/instasights update check
-./skills/instasights/instasights update apply
-./skills/instasights/instasights update check --apply --force
+```text
+https://YOUR_DOMAIN/api/callback
 ```
 
-## Auth Model
-
-- The CLI registers a public OAuth client against `/oauth/register`.
-- The browser handoff completes Google sign-in on the hosted app.
-- The CLI receives the callback on `127.0.0.1`, exchanges the code at `/oauth/token`, and stores auth state in `skills/instasights/.auth/state.json`.
-- Runtime-only skill data remains local inside `skills/instasights/.auth/` and `skills/instasights/.cache/`; those paths are excluded by `skills/instasights/.skillignore`.
-- Instagram linking still happens through the hosted `/api/login` handoff.
-
-## Hosted API
-
-The skill and CLI talk to the authenticated REST surface under `/api/v1/*`:
-
-- `GET /api/v1/account`
-- `GET /api/v1/snapshot/latest`
-- `GET /api/v1/media`
-- `GET /api/v1/media/:mediaId`
-- `GET /api/v1/report?days=30`
-- `GET /api/v1/sync-runs`
-- `GET /api/v1/sync-runs/:syncRunId`
-- `POST /api/v1/sync-runs`
-
-Legacy developer API keys are still supported for compatibility scripts.
-
-## MCP Deprecation
-
-- `/mcp` now returns `410 Gone`.
-- `/.well-known/oauth-protected-resource/mcp` now returns `410 Gone`.
-- The supported path is the Instasights skill plus bundled CLI.
-
-## Local Development
-
-Install dependencies:
+## Validation
 
 ```bash
-yarn install --frozen-lockfile
-```
-
-Useful commands:
-
-```bash
-yarn build:cli
-yarn package:skill
-yarn build:skill
 yarn typecheck
-yarn test:cli
-yarn test:packaging
-yarn test:web
-python3 -m pytest services/transcriber/tests
+yarn lint
+yarn test
+yarn build
+docker build -f Dockerfile.vercel -t instasights .
 ```
 
-The managed MJS runtime written into the skill lives at:
+## Deployment
+
+`Dockerfile.vercel` is compatible with Vercel Functions Container Images and ordinary OCI hosts. The server listens on `0.0.0.0:$PORT` and stores no local state.
+
+See [Vercel's container-image documentation](https://vercel.com/docs/functions/container-images) and [NestJS on Vercel](https://vercel.com/docs/frameworks/backend/nestjs).
+
+## API
+
+All analytics endpoints require the opaque credential and local proof managed by the CLI.
 
 ```text
-skills/instasights/bin/instasights.mjs
+GET  /health
+GET  /auth/instagram/start
+GET  /auth/instagram/callback (also `/api/callback` for the existing Meta app)
+POST /auth/instagram/refresh
+GET  /v1/instagram/me
+GET  /v1/instagram/me/insights
+GET  /v1/instagram/media
+GET  /v1/instagram/media/:mediaId
+GET  /v1/instagram/media/:mediaId/insights
 ```
 
-## Skill Bundle Distribution
-
-Instasights now publishes a full installable skill zip in addition to the managed CLI update files.
-
-- Packaging command: `yarn build:cli && yarn package:skill`
-- Default local output root: `packages/cli/dist/skill`
-- Versioned bundle path: `packages/cli/dist/skill/<version>/instasights-skill.zip`
-- Stable latest bundle path: `packages/cli/dist/skill/latest/instasights-skill.zip`
-- Stable latest manifest: `packages/cli/dist/skill/latest.json`
-
-The packaged zip expands to a top-level `instasights/` folder and includes the committed skill contents such as `SKILL.md`, `CLI.md`, `agents/openai.yaml`, `instasights`, and `bin/*`.
-
-Local-only skill state stays out of the bundle:
-
-- `.auth/`
-- `.cache/`
-- `.DS_Store`
-- anything listed in `skills/instasights/.skillignore`
-
-In CI, `.github/workflows/publish-cli.yml` publishes the existing CLI self-update artifacts under `cli/*` and the full skill bundle under `skill/*`.
-
-For the full packaging and S3 layout details, see [docs/skill-bundle-distribution.md](/Users/nickcruz/repos/instagram-insights/docs/skill-bundle-distribution.md).
-
-## License
-
-MIT. See [LICENSE](./LICENSE).
+Responses preserve Instagram `data` and cursor paging. Full upstream paging URLs are removed because they can contain access tokens. See [`docs/instagram-api-contract.md`](docs/instagram-api-contract.md) for the retained scopes, endpoints, metrics, token lifecycle, and data limitations.
