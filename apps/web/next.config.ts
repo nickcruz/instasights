@@ -2,6 +2,14 @@ import type { NextConfig } from "next";
 import { withWorkflow } from "workflow/next";
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ["ffmpeg-static", "ffprobe-static"],
+  outputFileTracingRoot: process.cwd(),
+  outputFileTracingIncludes: {
+    "/api/internal/transcriptions": [
+      "../../node_modules/ffmpeg-static/**",
+      "../../node_modules/ffprobe-static/**",
+    ],
+  },
   async rewrites() {
     return [
       {

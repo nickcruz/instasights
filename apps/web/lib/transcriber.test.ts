@@ -96,8 +96,8 @@ test("buildTranscriptMetadata captures the persisted response details", () => {
 });
 
 test("transcribeInstagramMedia retries transient 503 responses", async (t) => {
-  process.env.TRANSCRIBER_SERVICE_URL = "https://transcriber.example.com";
-  process.env.TRANSCRIBER_API_KEY = "test-key";
+  process.env.APP_URL = "https://instasights.example.com";
+  process.env.INTERNAL_TRANSCRIBER_API_KEY = "test-key";
 
   let attempts = 0;
   const originalFetch = globalThis.fetch;
@@ -146,8 +146,8 @@ test("transcribeInstagramMedia retries transient 503 responses", async (t) => {
   t.after(() => {
     globalThis.fetch = originalFetch;
     globalThis.setTimeout = originalSetTimeout;
-    delete process.env.TRANSCRIBER_SERVICE_URL;
-    delete process.env.TRANSCRIBER_API_KEY;
+    delete process.env.APP_URL;
+    delete process.env.INTERNAL_TRANSCRIBER_API_KEY;
   });
 
   const response = await transcribeInstagramMedia({
@@ -161,8 +161,8 @@ test("transcribeInstagramMedia retries transient 503 responses", async (t) => {
 });
 
 test("transcribeInstagramMedia does not retry non-retryable responses", async (t) => {
-  process.env.TRANSCRIBER_SERVICE_URL = "https://transcriber.example.com";
-  process.env.TRANSCRIBER_API_KEY = "test-key";
+  process.env.APP_URL = "https://instasights.example.com";
+  process.env.INTERNAL_TRANSCRIBER_API_KEY = "test-key";
 
   let attempts = 0;
   const originalFetch = globalThis.fetch;
@@ -183,8 +183,8 @@ test("transcribeInstagramMedia does not retry non-retryable responses", async (t
 
   t.after(() => {
     globalThis.fetch = originalFetch;
-    delete process.env.TRANSCRIBER_SERVICE_URL;
-    delete process.env.TRANSCRIBER_API_KEY;
+    delete process.env.APP_URL;
+    delete process.env.INTERNAL_TRANSCRIBER_API_KEY;
   });
 
   await assert.rejects(

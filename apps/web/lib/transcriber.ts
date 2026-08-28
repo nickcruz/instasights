@@ -5,6 +5,8 @@ import type {
 
 import { getEnv, getRequiredEnv } from "@/lib/env";
 
+const INTERNAL_TRANSCRIBER_PATH = "/api/internal/transcriptions";
+
 export const DEFAULT_TRANSCRIBER_MAX_SECONDS = 30;
 export const DEFAULT_TRANSCRIBER_CONCURRENCY = 1;
 const TRANSCRIBER_RETRY_DELAYS_MS = [250, 750];
@@ -31,7 +33,7 @@ export function resolveTranscriberMaxSeconds() {
 }
 
 export function isTranscriberConfigured() {
-  return Boolean(getEnv("TRANSCRIBER_SERVICE_URL") && getEnv("TRANSCRIBER_API_KEY"));
+  return Boolean(getEnv("INTERNAL_TRANSCRIBER_API_KEY") && getEnv("SONIOX_API_KEY"));
 }
 
 export function isInstagramMediaEligibleForTranscription(
@@ -70,15 +72,21 @@ export function buildTranscriptMetadata(input: {
 }
 
 function buildTranscriberEndpoint(baseUrl: string) {
-  const normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
+  return new URL(INTERNAL_TRANSCRIBER_PATH, baseUrl);
+}
 
-  return new URL("v1/transcriptions", normalizedBaseUrl);
+function resolveAppUrl() {
+  return (
+    getEnv("APP_URL") ??
+    getEnv("INSTAGRAM_APP_URL") ??
+    "http://localhost:3000"
+  );
 }
 
 function getTranscriberConfig() {
   return {
-    serviceUrl: getRequiredEnv("TRANSCRIBER_SERVICE_URL"),
-    apiKey: getRequiredEnv("TRANSCRIBER_API_KEY"),
+    appUrl: resolveAppUrl(),
+    apiKey: getRequiredEnv("INTERNAL_TRANSCRIBER_API_KEY"),
   };
 }
 
@@ -117,7 +125,7 @@ export async function transcribeInstagramMedia(
   request: TranscriptionRequest,
 ): Promise<TranscriptionResponse> {
   const config = getTranscriberConfig();
-  const endpoint = buildTranscriberEndpoint(config.serviceUrl);
+  const endpoint = buildTranscriberEndpoint(config.appUrl);
 
   for (let attempt = 0; attempt <= TRANSCRIBER_RETRY_DELAYS_MS.length; attempt += 1) {
     const response = await fetch(endpoint, {
@@ -125,7 +133,7 @@ export async function transcribeInstagramMedia(
       cache: "no-store",
       headers: {
         "content-type": "application/json",
-        "x-api-key": config.apiKey,
+        "x-internal-transcriber-key": config.apiKey,
       },
       body: JSON.stringify(request),
     });
