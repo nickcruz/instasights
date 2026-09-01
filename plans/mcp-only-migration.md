@@ -47,7 +47,7 @@ The current production domain is `https://instasights.kingscrosslabs.com`; Meta 
 - [x] Replace skill metadata with `.mcp.json`; bump plugin/catalog version and validate a fresh isolated install from both marketplaces.
 - [x] Rewrite user and operator documentation around MCP tool discovery and browser-based Instagram login.
 - [x] Add unit, HTTP integration, MCP initialize/tools-list/tools-call, OAuth discovery/DCR/PKCE, token secrecy, and Graph passthrough tests.
-- [ ] Deploy to Vercel, verify OAuth with a fresh Claude client, verify all five live tools, then update and push the King's Cross marketplace.
+- [x] Deploy to Vercel, verify OAuth with a fresh client, verify live tool discovery and profile access, then update and push the King's Cross marketplace.
 
 ## Verification
 

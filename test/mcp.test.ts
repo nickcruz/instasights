@@ -390,6 +390,40 @@ describe('MCP OAuth and protocol contract', () => {
     });
   });
 
+  test('dispatches all five tools through the MCP transport', async () => {
+    const token = await accessToken();
+    global.fetch = jest.fn(async () =>
+      new Response(JSON.stringify({ data: [] }), { status: 200 }),
+    ) as typeof fetch;
+    const calls = [
+      { name: 'instagram_get_profile', arguments: { fields: ['id'] } },
+      {
+        name: 'instagram_get_account_insights',
+        arguments: { metrics: ['views'], period: 'day' },
+      },
+      { name: 'instagram_list_media', arguments: { fields: ['id'], limit: 1 } },
+      { name: 'instagram_get_media', arguments: { mediaId: '456', fields: ['id'] } },
+      {
+        name: 'instagram_get_media_insights',
+        arguments: { mediaId: '456', metrics: ['views'] },
+      },
+    ];
+    for (const [index, tool] of calls.entries()) {
+      const response = await mcp(token, {
+        jsonrpc: '2.0',
+        id: 10 + index,
+        method: 'tools/call',
+        params: tool,
+      });
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({
+        id: 10 + index,
+        result: { isError: false },
+      });
+    }
+    expect(global.fetch).toHaveBeenCalledTimes(5);
+  });
+
   test('calls Instagram live and strips token-bearing paging URLs', async () => {
     const token = await accessToken();
     global.fetch = jest.fn(async () =>
