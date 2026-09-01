@@ -7,12 +7,12 @@ Instasights uses the Instagram API with Instagram Login. It does not use Faceboo
 - Authorization host: `https://www.instagram.com/oauth/authorize`
 - Short-token exchange: `POST https://api.instagram.com/oauth/access_token`
 - Long-token exchange: `GET https://graph.instagram.com/access_token?grant_type=ig_exchange_token`
-- Refresh: `GET https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token`
+- Instagram refresh capability: `GET https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token` (not exposed as an Instasights tool; users reauthorize when the MCP credential expires)
 - Scopes: `instagram_business_basic`, `instagram_business_manage_insights`
-- Redirect URI: exact configured HTTPS callback; `/api/callback` is retained for the existing Meta app and `/auth/instagram/callback` is an equivalent alias
+- Redirect URI: exact configured HTTPS callback (`/api/callback`)
 - Long-lived token lifetime: approximately 60 days; refresh only while the token is valid and at least 24 hours old
 
-The CLI receives an encrypted, proof-bound application credential rather than the raw Instagram token. No token is persisted by the API.
+The MCP token endpoint returns an encrypted, scope- and audience-bound bearer credential that expires no later than the Instagram long-lived token. Raw Instagram tokens are never returned, logged, or persisted by the API.
 
 ## Live Graph requests
 

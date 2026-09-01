@@ -1,20 +1,19 @@
 import { Module } from '@nestjs/common';
 
-import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
-import { CredentialGuard } from './auth/credential.guard';
+import { McpController } from './mcp/mcp.controller';
+import { McpService } from './mcp/mcp.service';
 import { APP_CONFIG, loadEnvironment } from './config/environment';
 import { HealthController } from './health/health.controller';
-import { InstagramController } from './instagram/instagram.controller';
 import { InstagramService } from './instagram/instagram.service';
 
 @Module({
-  controllers: [AuthController, HealthController, InstagramController],
+  controllers: [HealthController, McpController],
   providers: [
     { provide: APP_CONFIG, useFactory: loadEnvironment },
     AuthService,
-    CredentialGuard,
     InstagramService,
+    McpService,
   ],
 })
 export class AppModule {}

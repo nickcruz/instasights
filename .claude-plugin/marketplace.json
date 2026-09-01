@@ -4,21 +4,27 @@
     "name": "Nick Reyes"
   },
   "metadata": {
-    "description": "Live Instagram analytics for Claude Code."
+    "description": "Live Instagram analytics through remote MCP."
   },
   "plugins": [
     {
       "name": "instasights",
       "source": "./",
-      "description": "Connect Instagram and query live professional-account analytics.",
-      "version": "2.0.0",
+      "description": "Connect Instagram and query live professional-account analytics through remote MCP.",
+      "version": "3.0.0",
       "author": {
         "name": "Nick Reyes"
       },
       "homepage": "https://github.com/nickcruz/instasights",
       "repository": "https://github.com/nickcruz/instasights",
       "license": "MIT",
-      "keywords": ["instagram", "analytics", "creator", "claude-code"],
+      "keywords": [
+        "instagram",
+        "analytics",
+        "creator",
+        "claude-code",
+        "mcp"
+      ],
       "category": "data-analysis"
     }
   ]

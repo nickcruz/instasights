@@ -1,41 +1,44 @@
-# Claude Code Setup
+# Claude MCP Setup
 
 ## Install
 
-Run these commands inside Claude Code:
+Run inside Claude Code or Claude Code in the Claude Desktop app:
 
 ```text
-/plugin marketplace add nickcruz/instasights
-/plugin install instasights@instasights-plugins
+/plugin marketplace add https://github.com/kingscrosslabs/marketplace.git
+/plugin install instasights@kingscrosslabs-marketplace
 ```
 
-## Use
+The plugin contains only a remote MCP configuration pointing to:
+
+```text
+https://instasights.kingscrosslabs.com/mcp
+```
+
+It does not install a CLI, skill, Node.js runtime, or local token file.
+
+## Connect Instagram
 
 Ask Claude:
 
 > Connect my Instagram account and analyze the last 30 days.
 
-Claude will run the installed Instasights skill. If login is needed, a browser opens directly to Instagram authorization. The credential and its local proof remain under the installed skill's ignored `.auth/` directory.
+Claude discovers the MCP OAuth endpoints and opens Instagram Login in the browser. After approval, Claude stores an opaque encrypted MCP bearer credential; the raw Instagram token is never shown to Claude or returned by a tool.
 
-No Google login, manual sync, database, MCP server, or API key is involved.
+## Available tools
+
+- `instagram_get_profile` — profile fields for the connected professional account
+- `instagram_get_account_insights` — selected account metrics and time ranges
+- `instagram_list_media` — cursor-paginated media
+- `instagram_get_media` — one media item by numeric ID
+- `instagram_get_media_insights` — selected metrics for one media item
+
+Tool inputs are visible in Claude and enumerate every supported field and metric. The server rejects arbitrary Graph paths and unsupported arguments.
 
 ## Requirements
 
-- Claude Code
-- Node.js 20 or newer
-- An Instagram professional account
-- A browser on the same machine as Claude Code
+- An Instagram Business or Creator account
+- A browser available to the MCP client
+- A Claude client with remote Streamable HTTP MCP and OAuth support
 
-## Manual troubleshooting
-
-From the installed skill directory:
-
-```bash
-./instasights status
-./instasights login
-./instasights account
-./instasights insights --days 30
-./instasights media list --days 30
-```
-
-Set `INSTASIGHTS_API_URL` only when testing a local or staging API.
+If authentication was cached for an older Instasights MCP configuration, remove and reinstall the plugin so Claude performs fresh discovery and dynamic client registration.

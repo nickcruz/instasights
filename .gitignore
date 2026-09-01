@@ -7,5 +7,3 @@ dist
 coverage
 *.tsbuildinfo
 .DS_Store
-skills/instasights/.auth/
-skills/instasights/.cache/

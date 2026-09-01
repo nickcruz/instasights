@@ -1,30 +1,69 @@
-# Instasights
+# Instasights MCP
 
-Instasights is a small, stateless Instagram analytics wrapper built for Claude Code. A bundled CLI handles Instagram authorization and calls a NestJS API that forwards allowlisted requests to the live Instagram Graph API.
+Instasights is a thin remote MCP server for live Instagram professional-account analytics. Users complete Instagram Login once, then Claude sees five typed, read-only tools. Instasights does not sync, aggregate, report, transcribe, or store analytics.
 
-There is no analytics database, sync job, worker, report store, transcription service, MCP server, or AWS infrastructure.
+## Install in Claude
 
-## Install in Claude Code
+Run these commands in Claude Code, including Claude Code inside the Claude Desktop app:
 
 ```text
-/plugin marketplace add nickcruz/instasights
-/plugin install instasights@instasights-plugins
+/plugin marketplace add https://github.com/kingscrosslabs/marketplace.git
+/plugin install instasights@kingscrosslabs-marketplace
 ```
 
 Then ask Claude:
 
 > Connect my Instagram account and analyze the last 30 days.
 
-Claude uses the bundled skill to open Instagram authorization and query live profile, account-insight, media, and per-media insight data.
+Claude performs standard MCP OAuth, opens Instagram authorization in the browser, and stores only the opaque MCP credential in its credential storage. No Node.js runtime, CLI, skill executable, API key, or manually copied Instagram token is required.
 
-## Local API development
+## Tools
+
+- `instagram_get_profile`
+- `instagram_get_account_insights`
+- `instagram_list_media`
+- `instagram_get_media`
+- `instagram_get_media_insights`
+
+Tool schemas expose the supported fields, metrics, time ranges, and cursor pagination inputs. Every call reads Instagram live.
+
+## Architecture
+
+The production MCP endpoint is:
+
+```text
+https://instasights.kingscrosslabs.com/mcp
+```
+
+The server implements stateless Streamable HTTP MCP and OAuth discovery, dynamic client registration, authorization code with S256 PKCE, and protected-resource bearer challenges. The Instagram long-lived token is carried only inside an AES-256-GCM encrypted, audience-bound MCP credential. The API has no database or analytics state.
+
+Authorization-code nonces have a bounded process-local replay cache. PKCE, exact redirect validation, audience binding, and short code expiry remain effective across instances; strict cross-instance one-time code consumption would require shared state and is intentionally outside this database-free design.
+
+The public HTTP surface is limited to:
+
+```text
+GET  /health
+GET  /.well-known/oauth-protected-resource/mcp
+GET  /.well-known/oauth-authorization-server
+POST /oauth/register
+GET  /oauth/authorize
+POST /oauth/token
+GET  /api/callback
+POST /mcp
+```
+
+The Graph wrapper accepts only allowlisted profile, insight, media, and media-insight operations. It strips token-bearing paging URLs and returns cursor values only.
+
+## Development
+
+Copy `.env.example`, configure the required variables, and run:
 
 ```bash
 yarn install
 yarn dev
 ```
 
-Required environment variables are documented in `.env.example`. The Instagram redirect URI is:
+The Meta redirect URI is:
 
 ```text
 https://YOUR_DOMAIN/api/callback
@@ -38,28 +77,7 @@ yarn lint
 yarn test
 yarn build
 docker build -f Dockerfile.vercel -t instasights .
+claude plugin validate .
 ```
 
-## Deployment
-
-`Dockerfile.vercel` is compatible with Vercel Functions Container Images and ordinary OCI hosts. The server listens on `0.0.0.0:$PORT` and stores no local state.
-
-See [Vercel's container-image documentation](https://vercel.com/docs/functions/container-images) and [NestJS on Vercel](https://vercel.com/docs/frameworks/backend/nestjs).
-
-## API
-
-All analytics endpoints require the opaque credential and local proof managed by the CLI.
-
-```text
-GET  /health
-GET  /auth/instagram/start
-GET  /auth/instagram/callback (also `/api/callback` for the existing Meta app)
-POST /auth/instagram/refresh
-GET  /v1/instagram/me
-GET  /v1/instagram/me/insights
-GET  /v1/instagram/media
-GET  /v1/instagram/media/:mediaId
-GET  /v1/instagram/media/:mediaId/insights
-```
-
-Responses preserve Instagram `data` and cursor paging. Full upstream paging URLs are removed because they can contain access tokens. See [`docs/instagram-api-contract.md`](docs/instagram-api-contract.md) for the retained scopes, endpoints, metrics, token lifecycle, and data limitations.
+See [`docs/instagram-api-contract.md`](docs/instagram-api-contract.md) for supported Instagram scopes, fields, metrics, and access limitations.

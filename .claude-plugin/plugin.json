@@ -1,14 +1,11 @@
 {
   "name": "instasights",
-  "description": "Connect Instagram and query live professional-account analytics through a stateless API.",
-  "version": "2.0.0",
-  "author": {
-    "name": "Nick Reyes"
-  },
+  "description": "Live Instagram analytics through a remote MCP server.",
+  "version": "3.0.0",
+  "author": { "name": "Nick Reyes" },
   "homepage": "https://github.com/nickcruz/instasights",
   "repository": "https://github.com/nickcruz/instasights",
   "license": "MIT",
-  "keywords": ["instagram", "analytics", "creator", "claude-code"],
-  "skills": "./skills/",
+  "keywords": ["instagram", "analytics", "mcp"],
   "category": "data-analysis"
 }

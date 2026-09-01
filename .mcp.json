@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "instasights": {
+      "type": "http",
+      "url": "https://instasights.kingscrosslabs.com/mcp"
+    }
+  }
+}

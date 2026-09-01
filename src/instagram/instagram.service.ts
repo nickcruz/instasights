@@ -1,13 +1,8 @@
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-} from '@nestjs/common';
-import type { Response } from 'express';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 
 import { APP_CONFIG, type AppConfig } from '../config/environment';
 
-const PROFILE_FIELDS = new Set([
+export const PROFILE_FIELDS = [
   'id',
   'user_id',
   'username',
@@ -17,9 +12,9 @@ const PROFILE_FIELDS = new Set([
   'followers_count',
   'follows_count',
   'media_count',
-]);
+] as const;
 
-const MEDIA_FIELDS = new Set([
+export const MEDIA_FIELDS = [
   'id',
   'caption',
   'comments_count',
@@ -34,9 +29,9 @@ const MEDIA_FIELDS = new Set([
   'thumbnail_url',
   'timestamp',
   'username',
-]);
+] as const;
 
-const ACCOUNT_METRICS = new Set([
+export const ACCOUNT_METRICS = [
   'accounts_engaged',
   'comments',
   'follows_and_unfollows',
@@ -47,9 +42,9 @@ const ACCOUNT_METRICS = new Set([
   'shares',
   'total_interactions',
   'views',
-]);
+] as const;
 
-const MEDIA_METRICS = new Set([
+export const MEDIA_METRICS = [
   'comments',
   'follows',
   'likes',
@@ -63,8 +58,12 @@ const MEDIA_METRICS = new Set([
   'total_interactions',
   'views',
   'watch_time',
-]);
+] as const;
 
+const PROFILE_FIELD_SET = new Set<string>(PROFILE_FIELDS);
+const MEDIA_FIELD_SET = new Set<string>(MEDIA_FIELDS);
+const ACCOUNT_METRIC_SET = new Set<string>(ACCOUNT_METRICS);
+const MEDIA_METRIC_SET = new Set<string>(MEDIA_METRICS);
 const RATE_LIMIT_HEADERS = [
   'retry-after',
   'x-app-usage',
@@ -78,74 +77,72 @@ type Policy = {
   timeRange?: boolean;
 };
 
+export type InstagramResult = {
+  status: number;
+  body: unknown;
+  rateLimit: Record<string, string>;
+};
+
 @Injectable()
 export class InstagramService {
   constructor(@Inject(APP_CONFIG) private readonly config: AppConfig) {}
 
   profile(
-    response: Response,
     token: string,
     query: Record<string, unknown>,
-  ): Promise<void> {
-    return this.forward(response, '/me', token, query, {
-      fields: PROFILE_FIELDS,
-    });
+  ): Promise<InstagramResult> {
+    return this.forward('/me', token, query, { fields: PROFILE_FIELD_SET });
   }
 
   accountInsights(
-    response: Response,
     token: string,
     userId: string,
     query: Record<string, unknown>,
-  ): Promise<void> {
-    return this.forward(response, `/${this.id(userId)}/insights`, token, query, {
-      metrics: ACCOUNT_METRICS,
+  ): Promise<InstagramResult> {
+    return this.forward(`/${this.id(userId)}/insights`, token, query, {
+      metrics: ACCOUNT_METRIC_SET,
       timeRange: true,
     });
   }
 
   media(
-    response: Response,
     token: string,
     userId: string,
     query: Record<string, unknown>,
-  ): Promise<void> {
-    return this.forward(response, `/${this.id(userId)}/media`, token, query, {
-      fields: MEDIA_FIELDS,
+  ): Promise<InstagramResult> {
+    return this.forward(`/${this.id(userId)}/media`, token, query, {
+      fields: MEDIA_FIELD_SET,
       pagination: true,
       timeRange: true,
     });
   }
 
   mediaItem(
-    response: Response,
     token: string,
     mediaId: string,
     query: Record<string, unknown>,
-  ): Promise<void> {
-    return this.forward(response, `/${this.id(mediaId)}`, token, query, {
-      fields: MEDIA_FIELDS,
+  ): Promise<InstagramResult> {
+    return this.forward(`/${this.id(mediaId)}`, token, query, {
+      fields: MEDIA_FIELD_SET,
     });
   }
 
   mediaInsights(
-    response: Response,
     token: string,
     mediaId: string,
     query: Record<string, unknown>,
-  ): Promise<void> {
-    return this.forward(response, `/${this.id(mediaId)}/insights`, token, query, {
-      metrics: MEDIA_METRICS,
+  ): Promise<InstagramResult> {
+    return this.forward(`/${this.id(mediaId)}/insights`, token, query, {
+      metrics: MEDIA_METRIC_SET,
     });
   }
 
   private async forward(
-    response: Response,
     path: string,
     token: string,
     rawQuery: Record<string, unknown>,
     policy: Policy,
-  ): Promise<void> {
+  ): Promise<InstagramResult> {
     const url = new URL(
       `https://graph.instagram.com/${this.config.graphVersion}${path}`,
     );
@@ -161,37 +158,44 @@ export class InstagramService {
         signal: AbortSignal.timeout(this.config.timeoutMs),
       });
     } catch (cause) {
-      const causeName =
+      const name =
         cause && typeof cause === 'object' && 'name' in cause
           ? String(cause.name)
           : '';
-      const timedOut = causeName === 'TimeoutError' || causeName === 'AbortError';
-      response.status(timedOut ? 504 : 502).json({
-        error: {
-          message: timedOut
-            ? 'Instagram request timed out'
-            : 'Instagram request failed',
+      const timedOut = name === 'TimeoutError' || name === 'AbortError';
+      return {
+        status: timedOut ? 504 : 502,
+        rateLimit: {},
+        body: {
+          error: {
+            message: timedOut
+              ? 'Instagram request timed out'
+              : 'Instagram request failed',
+          },
         },
-      });
-      return;
+      };
     }
 
+    const rateLimit: Record<string, string> = {};
     for (const header of RATE_LIMIT_HEADERS) {
       const value = upstream.headers.get(header);
-      if (value) response.setHeader(header, value);
+      if (value) rateLimit[header] = value;
     }
-
     const body = (await upstream.json().catch(() => undefined)) as unknown;
     if (body === undefined) {
-      response.status(502).json({
-        error: { message: 'Instagram returned a non-JSON response' },
-      });
-      return;
+      return {
+        status: 502,
+        rateLimit,
+        body: { error: { message: 'Instagram returned a non-JSON response' } },
+      };
     }
-
-    response.status(upstream.status).json(
-      upstream.ok ? this.safeSuccess(body) : this.safeError(body, upstream.status),
-    );
+    return {
+      status: upstream.status,
+      rateLimit,
+      body: upstream.ok
+        ? this.safeSuccess(body)
+        : this.safeError(body, upstream.status),
+    };
   }
 
   private validateQuery(
@@ -306,10 +310,7 @@ export class InstagramService {
         ? (source as Record<string, unknown>)
         : {};
     const safe: Record<string, unknown> = {
-      message:
-        typeof error.message === 'string'
-          ? error.message
-          : `Instagram request failed with status ${status}`,
+      message: `Instagram request failed with status ${status}`,
     };
     for (const key of ['type', 'code', 'error_subcode', 'fbtrace_id']) {
       if (typeof error[key] === 'string' || typeof error[key] === 'number') {

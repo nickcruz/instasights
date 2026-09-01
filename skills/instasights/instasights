@@ -1,5 +1,0 @@
-#!/usr/bin/env sh
-set -eu
-ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-export INSTASIGHTS_SKILL_ROOT="$ROOT"
-exec node "$ROOT/bin/instasights.mjs" "$@"
